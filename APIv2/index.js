@@ -1,4 +1,5 @@
 // Importar dependencias
+const path = require('path');
 const express = require('express');
 const app = express();
 // --- Render / red ---
@@ -4045,6 +4046,13 @@ app.get('/apiv2/informes/excel/anual', authMiddleware, async (req, res) => {
     console.error(err);
     res.status(500).json({ error:'Error generando Excel (anual)' });
   }
+});
+
+// servir el build del frontend
+const clientPath = path.join(__dirname, 'anh-crud', 'build'); // usa 'dist' si es Vite
+app.use(express.static(clientPath));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientPath, 'index.html'));
 });
 
 // al iniciar tu server (antes de las rutas)
