@@ -4048,19 +4048,25 @@ app.get('/apiv2/informes/excel/anual', authMiddleware, async (req, res) => {
   }
 });
 
-// servir el build del frontend
-const clientPath = path.join(__dirname, 'anh-crud', 'build'); // usa 'dist' si es Vite
+// Archivos estáticos del build (JS/CSS/img)
+const clientPath = path.join(__dirname, 'anh-crud', 'build');
 app.use(express.static(clientPath));
-app.get('*', (req, res) => {
+
+// Fallback de SPA: sólo si la ruta NO empieza con /apiv2
+app.get(/^\/(?!apiv2\/).*/, (req, res) => {
   res.sendFile(path.join(clientPath, 'index.html'));
 });
 
-// al iniciar tu server (antes de las rutas)
+
+// ETag off (opcional)
 app.set('etag', false);
-app.use((req, res, next) => {
+
+// No cache para la API (mejor que hacerlo global)
+app.use('/apiv2', (req, res, next) => {
   res.set('Cache-Control', 'no-store');
   next();
 });
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Server
