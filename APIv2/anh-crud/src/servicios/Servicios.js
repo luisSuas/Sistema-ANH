@@ -10,7 +10,10 @@ import axios from "axios";
   }
 })();
 
-const RAW = (process.env.REACT_APP_API_URL || "http://localhost:8800").trim();
+const RAW = (
+  process.env.REACT_APP_API_URL ||
+  (typeof window !== "undefined" ? window.location.origin : "http://localhost:8800")
+).trim();
 
 function normalizeHost(raw) {
   let host = raw;
