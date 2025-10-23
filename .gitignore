@@ -1,0 +1,10 @@
+# API
+node_modules/
+.env
+npm-debug.log*
+yarn-error.log*
+
+# Frontend
+anh-crud/node_modules/
+anh-crud/build/
+anh-crud/.env

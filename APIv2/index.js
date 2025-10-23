@@ -4,7 +4,7 @@ const app = express();
 // --- Render / red ---
 const PORT = process.env.PORT || 8880; // puerto que inyecta Render (fallback local)
 app.set('trust proxy', 1);             // Render está detrás de proxy
-const dotenv = require('dotenv');
+require('dotenv').config();
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cors = require('cors');
@@ -17,6 +17,8 @@ const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit'); // rate limit login/reset
 const speakeasy = require('speakeasy');          // MFA TOTP
 const QRCode = require('qrcode');                // QR para Authenticator
+const useSSL = (process.env.PGSSLMODE || '').toLowerCase() === 'require';
+const dbOpts = process.env.DATABASE_URL
 
 
 // TTL de los enlaces de reseteo (15 min por defecto, configurable por env)
@@ -304,8 +306,6 @@ const ORD_REF_INTERNA = ['Área Social','Área Psicológica','Área Médica','Á
 
 const ORD_AREA_RESIDENCIA = ['Colonia','Barrio Popular','Asentamiento','Zonas','Municipio','Aldea','Caserío','Cantón'];
 
-// Cargar configuración desde .env
-dotenv.config();
 
 // 🔸 Helpers de seguridad (colocar una sola vez)
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
@@ -332,19 +332,25 @@ function getClientIp(req) {
 
 
 // Configurar conexión a PostgreSQL
-const pool = new Pool({
-  host:     process.env.DB_HOST,
-  user:     process.env.DB_USER,
-  port:     process.env.DB_PORT,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_SCHEMA, // nombre de BD (lo mantengo como lo tienes)
-});
+const dbConfig = process.env.DATABASE_URL
+  ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+  : {
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT || 5432),
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      ssl: useSSL ? { rejectUnauthorized: false } : false
+    };
+
+const pool = new Pool(dbConfig);
+
+    
 
 pool
   .connect()
   .then(async (client) => {
     console.log('✅ Conectado a PostgreSQL');
-    // 🔸 NUEVO: crear tabla de tokens de reseteo si no existe (seguro, idempotente)
     try {
       await client.query(`
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -355,16 +361,36 @@ pool
           used BOOLEAN NOT NULL DEFAULT FALSE,
           created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
         );
-        CREATE INDEX IF NOT EXISTS idx_prt_user ON password_reset_tokens(user_id);
+
+        CREATE INDEX IF NOT EXISTS idx_prt_user   ON password_reset_tokens(user_id);
         CREATE INDEX IF NOT EXISTS idx_prt_expires ON password_reset_tokens(expires_at);
-        CREATE INDEX IF NOT EXISTS idx_prt_token ON password_reset_tokens(token_hash);
-        -- 🔸 MIGRACIÓN SUAVE: agrega la columna "token" si aún no existe (para evitar NOT NULL en esquemas antiguos)
-        DO $$ BEGIN
+        CREATE INDEX IF NOT EXISTS idx_prt_token  ON password_reset_tokens(token_hash);
+
+        -- 🔸 Migraciones suaves: agrega columnas que tu código usa si faltan
+        DO $$
+        BEGIN
+          -- columna token (por compatibilidad)
           IF NOT EXISTS (
             SELECT 1 FROM information_schema.columns
             WHERE table_name='password_reset_tokens' AND column_name='token'
           ) THEN
             ALTER TABLE password_reset_tokens ADD COLUMN token TEXT;
+          END IF;
+
+          -- requested_ip
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='password_reset_tokens' AND column_name='requested_ip'
+          ) THEN
+            ALTER TABLE password_reset_tokens ADD COLUMN requested_ip TEXT;
+          END IF;
+
+          -- user_agent
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='password_reset_tokens' AND column_name='user_agent'
+          ) THEN
+            ALTER TABLE password_reset_tokens ADD COLUMN user_agent TEXT;
           END IF;
         END $$;
       `);
@@ -1738,8 +1764,8 @@ function normalizaPaisDesdeTexto(txt='') {
 app.get('/apiv2/operativa/victimas', authMiddleware, async (req, res) => {
   const client = await pool.connect();
   try {
-    const { role_id } = req.user || {};
-    const isCG = Number(role_id) === 1; // 1 = Coordinación General
+   const { role } = req.user || {};
+const isCG = Number(role) === ROLES.COORD_GENERAL; // 1 = Coordinación General
 
     // --- resolver área desde query o JWT (area_id numérico o area string) ---
     const mapArea = (val) => {
@@ -1985,10 +2011,10 @@ app.put('/apiv2/victimas/:id', authMiddleware, async (req, res) => {
 
     // Cargar extra actual (para merge)
     let currentExtra = {};
-    if (cols.has('extra')) {
-      const r = await pool.query('SELECT extra FROM victimas WHERE id = $1', [id]);
-      currentExtra = r.rows?.[0]?.extra ?? {};
-    }
+if (cols.has('extra')) {
+  const r = await pool.query('SELECT extra FROM victimas WHERE id = $1', [id]);
+  currentExtra = r.rows?.[0]?.extra ?? {};
+}
 
     const payload = {};
 
@@ -2037,16 +2063,17 @@ app.put('/apiv2/victimas/:id', authMiddleware, async (req, res) => {
     }
 
     // Merge de EXTRA
-   if (mo == null && typeof origenInput === 'string' && origenInput.trim()) {
+  const nextExtra = { ...currentExtra };
+if (mo == null && typeof origenInput === 'string' && origenInput.trim()) {
   const raw = origenInput.trim();
   nextExtra.origen_texto = looksLikeGuatemalaPlace(raw) ? raw : normalizaPaisDesdeTexto(raw);
 }
-    if (typeof b.residencia === 'string' && b.residencia.trim()) {
-      nextExtra.residencia_texto = b.residencia.trim();
-    }
-    if (Object.keys(nextExtra).length && cols.has('extra')) {
-      payload.extra = nextExtra;
-    }
+if (typeof b.residencia === 'string' && b.residencia.trim()) {
+  nextExtra.residencia_texto = b.residencia.trim();
+}
+if (Object.keys(nextExtra).length && cols.has('extra')) {
+  payload.extra = nextExtra;
+}
 
     const fields = Object.keys(payload);
     if (!fields.length) return res.json({ message: 'Sin cambios' });
@@ -4031,5 +4058,5 @@ app.use((req, res, next) => {
 // Server
 // ─────────────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`✅ API corriendo en puerto ${PORT}`);
+  console.log(`HTTP server listening on :${PORT}`);
 });

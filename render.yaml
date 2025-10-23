@@ -1,0 +1,33 @@
+services:
+  # ───────── BACKEND (API) ─────────
+  - type: web
+    name: caimus-api
+    env: node
+    rootDir: .
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PGSSLMODE
+        value: require
+      # Agrega en el panel de Render:
+      # DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_SCHEMA
+      # JWT_SECRET, APP_URL, CORS_ORIGINS (o APP_ORIGIN)
+      # SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, SMTP_FROM
+      # LOGIN_MAX_FAILS, LOGIN_LOCK_MIN, RESET_TOKEN_TTL_MIN
+
+  # ───────── FRONTEND (React en ./anh-crud) ─────────
+  - type: static
+    name: caimus-frontend
+    rootDir: anh-crud
+    buildCommand: npm ci && npm run build
+    staticPublishPath: build
+    autoDeploy: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
