@@ -1,0 +1,670 @@
+/* =========================================================
+   Paleta y base
+   ========================================================= */
+:root{
+  --bg: #0b1220;
+  --panel: #0f172a;
+  --muted: #9aa4b2;
+  --text: #e6e9ef;
+  --line: #1f2a44;
+  --brand1: #5b8cff;
+  --brand2: #3b5bdb;
+  --ok: #22c55e;
+  --danger: #ef4444;
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+/* =========================================================
+   Anti-overflow global
+   ========================================================= */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* =========================================================
+   Shell
+   ========================================================= */
+.admin-shell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+}
+.admin-shell > * { min-width: 0; }
+
+/* =========================================================
+   Sidebar
+   ========================================================= */
+.admin-aside {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 16px;
+  background: var(--bg);
+  border-right: 1px solid #1c2942;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.brand { font-weight: 800; font-size: 18px; }
+.nav { display: grid; gap: 8px; justify-items: start; }
+
+.navlink {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #1f2b46;
+  background: var(--panel);
+  color: var(--text);
+  text-decoration: none;
+  width: auto;
+  max-width: max-content;
+}
+.navlink:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59,130,246,.35);
+}
+.navlink.active {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15) inset;
+}
+
+.aside-footer { margin-top: auto; display: grid; gap: 10px; justify-items: start; }
+.aside-footer .btn { width: auto; }
+.me-name { font-weight: 600; }
+.me-role { font-size: 12px; color: #94a3b8; }
+
+/* =========================================================
+   Main
+   ========================================================= */
+.admin-main {
+  padding: 20px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* =========================================================
+   Páginas genéricas
+   ========================================================= */
+.page {
+  max-width: 1050px;
+  margin: 0 auto;
+  min-width: 0;
+}
+.page-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom: 12px;
+}
+.header-actions { display:flex; gap:10px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; }
+.card { padding: 14px; background:var(--bg); border:1px solid #243150; border-radius: 12px; }
+.card-label { color:#9aa4b2; font-size:12px; margin-bottom:6px; }
+.card-value { font-size:28px; font-weight:800; }
+
+/* =========================================================
+   Inputs/tablas reutilizables
+   ========================================================= */
+.input{
+  width:100%;
+  padding:10px 12px;
+  background:var(--bg);
+  color:var(--text);
+  border:1px solid #25324a;
+  border-radius:10px;
+  outline:none;
+}
+.input:focus{
+  border-color:#3b82f6;
+  box-shadow:0 0 0 3px rgba(59,130,246,.25);
+}
+
+.toolbar { margin: 10px 0 12px; }
+
+.table-wrap {
+  overflow: auto;
+  border-radius: 10px;
+  border:1px solid #243150;
+  max-width: 100%;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 0;
+}
+.table th, .table td { padding: 10px 12px; border-bottom:1px solid #1c2942; text-align:left; }
+.table thead th { background:var(--bg); color:#9aa4b2; font-weight:600; }
+.table .actions { display:flex; gap:8px; }
+
+/* =========================================================
+   Botones y mensajes
+   ========================================================= */
+.btn{
+  appearance: none;
+  border:1px solid #2b364d;
+  background:#111827;
+  color:var(--text);
+  padding:10px 14px;
+  border-radius:12px;
+  cursor:pointer;
+  transition: transform .04s ease, filter .15s ease, background .15s ease;
+}
+.btn:hover { background:#0f172a; }
+.btn:active { transform: translateY(1px); }
+
+.btn-primary{
+  color:#fff;
+  background: linear-gradient(180deg, var(--brand1), var(--brand2));
+  border-color: var(--brand2);
+  box-shadow: 0 6px 16px rgba(59,91,219,.35);
+}
+.btn-primary:hover{ filter:brightness(1.05); }
+
+.btn-danger{ background:#c62828; border-color:#b71c1c; color:#fff; }
+.btn-soft{
+  color: var(--text);
+  background:#121a2f;
+  border:1px solid var(--line);
+}
+.btn-soft:hover{ filter:brightness(1.07); }
+
+.w-full { width: 100%; }
+
+.msg{
+  padding: 12px;
+  border-radius:12px;
+  border:1px solid transparent;
+  margin: 12px 0;
+  font-weight:500;
+}
+.msg.ok    { background:#082b19; border-color:#14532d; color:#d1fae5; }
+.msg.error { background:#2a0f12; border-color:#7f1d1d; color:#fecaca; }
+
+/* =========================================================
+   Formularios legacy
+   ========================================================= */
+.admin-form .grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.field label{ display:block; margin-bottom:6px; font-size:14px; color:#d1d5db; }
+.hint{ color:#9aa4b2; font-size:12px; margin-top:4px; }
+.actions{ display:flex; gap:10px; }
+
+/* =========================================================
+   🎯 Formulario "Registrar usuario"
+   ========================================================= */
+.admin-create{ color: var(--text); }
+
+.admin-create__header{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom: 18px;
+}
+.admin-create__header h1{
+  font-size: clamp(18px, 2.2vw, 28px);
+  margin:0 0 4px 0;
+}
+.admin-create__subtitle{ margin:0; color: var(--muted); }
+
+.admin-card{
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(91,140,255,.10), transparent),
+    radial-gradient(1200px 600px at 110% -10%, rgba(59,91,219,.08), transparent),
+    var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.form-grid{
+  display:grid;
+  gap: 14px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.form-row{ 
+  display:flex; 
+  flex-direction:column; 
+  gap:8px; 
+  min-height: 85px; /* Altura mínima aumentada para consistencia */
+  justify-content: flex-start;
+  align-items: stretch;
+}
+.form-row label{ 
+  font-size:.92rem; 
+  color: var(--muted); 
+  font-weight: 500;
+}
+
+.form-row input,
+.form-row select{
+  background:var(--bg);
+  color:var(--text);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:11px 12px;
+  outline:none;
+  transition: border-color .15s, box-shadow .15s, transform .02s;
+  height: 44px; /* Altura fija para consistencia visual */
+  box-sizing: border-box;
+}
+.form-row input::placeholder{ color:#6b7280; }
+.form-row input:focus,
+.form-row select:focus{
+  border-color: rgba(91,140,255,.55);
+  box-shadow: 0 0 0 3px rgba(91,140,255,.18);
+}
+
+.form-row select{
+  appearance:none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size:6px 6px, 6px 6px;
+  background-repeat:no-repeat;
+  padding-right:34px;
+}
+
+/* Asegura que los campos sin hint tengan el mismo espacio visual */
+.form-row:not(:has(.hint)) {
+  padding-bottom: 25px; /* Espacio adicional para compensar la falta de hint */
+  min-height: 85px; /* Altura mínima igual a los campos con hint */
+}
+
+/* Ajuste específico para el campo Área */
+.form-row:has(select[name="area_id"]) {
+  min-height: 85px;
+  padding-bottom: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Asegura que todos los campos tengan la misma altura total */
+.form-row:has(.hint) {
+  min-height: 85px;
+}
+
+/* Fuerza que todos los form-row tengan exactamente la misma altura */
+.form-grid .form-row {
+  height: 85px !important;
+  min-height: 85px !important;
+  max-height: 85px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  align-items: stretch !important;
+}
+
+/* Asegura que los campos sin hint tengan un espacio equivalente al hint */
+.form-row:not(:has(.hint))::after {
+  content: "";
+  display: block;
+  height: 20px; /* Altura equivalente al hint */
+  flex-shrink: 0;
+}
+
+.form-actions{
+  grid-column:1 / -1;
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  margin-top:30px; /* Espaciado aumentado desde el último campo */
+  padding-top: 12px; /* Espacio adicional para separación visual */
+}
+
+.footnote{ color: var(--muted); margin-top:14px; font-size:.92rem; }
+
+/* =========================================================
+   🧩 RESPONSIVE BREAKPOINTS
+   ========================================================= */
+
+/* ===== Colapsar sidebar a topbar (≤1100px) ===== */
+@media (max-width: 1100px){
+  .admin-shell{
+    grid-template-columns: 1fr;
+    grid-auto-rows: min-content;
+  }
+
+  .admin-aside{
+    grid-column: 1 / -1;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: auto;
+    padding: 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .nav{
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 4px;
+  }
+  .nav::-webkit-scrollbar{ height: 6px; }
+  .nav::-webkit-scrollbar-thumb{ background: #1f2a44; border-radius: 999px; }
+  
+  .navlink{
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 8px 10px;
+  }
+
+  .aside-footer{
+    margin-top: 4px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .admin-main{
+    grid-column: 1 / -1;
+    padding: 16px;
+  }
+
+  .page{
+    max-width: none;
+    margin: 0;
+  }
+}
+
+/* ===== Formularios a 1 columna (≤880px) ===== */
+@media (max-width: 880px){
+  .form-grid{ grid-template-columns: 1fr; }
+}
+
+/* ===== Tablas → Cards en móvil (≤820px) ===== */
+@media (max-width: 820px){
+  .admin-main{ padding: 14px 12px; }
+  .page{ padding: 0 2px; }
+
+  .page-header{
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .header-actions{ width: 100%; justify-content: flex-start; }
+
+  .cards{ grid-template-columns: 1fr; gap: 10px; }
+  .card{ padding: 12px; }
+  .card-label{ font-size: 11.5px; }
+  .card-value{ font-size: 22px; }
+
+  /* Tabla como tarjetas */
+  .table-wrap{
+    overflow-x: visible;
+    border: none;
+    padding: 0;
+    max-width: 100%;
+  }
+  .table{
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .table thead{ display: none; }
+  .table tbody{ display: block; max-width: 100%; }
+
+  .table tbody tr{
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin: 10px 0;
+    box-shadow: 0 6px 16px rgba(0,0,0,.18);
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .table tbody td{
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #1c2942;
+    box-sizing: border-box;
+    word-break: break-word;
+  }
+  .table tbody td:last-child{ border-bottom: none; }
+
+  .table tbody td::before{
+    content: attr(data-label);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: .9rem;
+    letter-spacing: .01em;
+  }
+
+  /* Acciones en columna apilada */
+  .table tbody td.actions{
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 12px;
+    border-top: 1px solid #1b2540;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .table tbody td.actions::before{
+    content: attr(data-label);
+    margin-bottom: 8px;
+    display: block;
+  }
+  .table tbody td.actions .btn{
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+  }
+  .table tbody td.actions .btn + .btn{
+    margin-top: 8px;
+  }
+
+  .form-row input, .form-row select{ padding: 10px 11px; }
+  .actions{ flex-wrap: wrap; }
+  .actions .btn{ flex: 1 1 auto; }
+}
+
+/* ===== "Salir" full-width en móvil chico (≤600px) ===== */
+@media (max-width: 600px){
+  .aside-footer .btn-danger{ width: 100%; }
+}
+
+/* ===== XS: ajustes finales (≤420px) ===== */
+@media (max-width: 420px){
+  .navlink{ font-size: 13px; padding: 8px 9px; }
+  .card-value{ font-size: 20px; }
+  .btn, .btn-primary, .btn-soft, .btn-danger{
+    padding: 9px 12px;
+    border-radius: 10px;
+  }
+  .admin-create__header h1{ font-size: clamp(18px, 5.5vw, 24px); }
+  .form-row input, .form-row select{
+    padding: 10px 11px;
+    border-radius: 10px;
+  }
+  .form-actions{
+    justify-content: stretch;
+  }
+  .form-actions .btn{
+    flex: 1 1 auto;
+  }
+
+  .table tbody td{
+    grid-template-columns: 88px 1fr;
+    padding: 9px 10px;
+  }
+  .table tbody td.actions{
+    padding: 9px 10px;
+  }
+}
+
+/* ===== FINAL OVERRIDES: cards contenidas + acciones apiladas (≤820px) ===== */
+@media (max-width: 820px){
+  /* Nada se sale horizontalmente del viewport */
+  html, body, .admin-shell, .admin-main, .page { max-width: 100%; overflow-x: hidden; }
+  .admin-shell { grid-template-columns: 1fr; }
+  .admin-main  { padding: 14px 12px; }
+  .page        { padding-inline: 2px; }
+
+  /* La tabla se convierte en tarjetas compactas 100% ancho */
+  .table-wrap { overflow-x: hidden !important; }
+  .table{
+    width: 100% !important;
+    min-width: 0 !important;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .table thead{ display: none !important; }
+  .table tbody{ display: block; }
+  .table tbody tr{
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin: 10px 0;
+    box-shadow: 0 6px 16px rgba(0,0,0,.18);
+    overflow: hidden;
+  }
+
+  /* Celdas: etiqueta + valor, sin empujar el ancho */
+  .table tbody td{
+    display: grid !important;
+    grid-template-columns: 92px 1fr !important; /* etiqueta | valor */
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px !important;
+    border-bottom: 1px solid #1c2942;
+    min-width: 0 !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  .table tbody td:last-child{ border-bottom: none; }
+  .table tbody td::before{
+    content: attr(data-label);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: .88rem;
+  }
+
+  /* Acciones: APILADAS (Editar encima / Eliminar debajo) */
+  .table tbody td.actions{
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px;
+    padding: 10px 12px !important;
+    border-top: 1px solid #1b2540;
+    overflow-x: hidden !important;   /* sin scroll lateral */
+  }
+  .table tbody td.actions::before{
+    content: attr(data-label);
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .table tbody td.actions .btn{
+    width: 100% !important;          /* botón a todo el ancho de la tarjeta */
+  }
+}
+
+/* XS: etiquetas un poco más angostas y aún más compacto */
+@media (max-width: 420px){
+  .table tbody td{ grid-template-columns: 84px 1fr !important; padding: 9px 10px !important; }
+  .table tbody td.actions{ padding: 9px 10px !important; }
+}
+
+/* ====== FIX: Crear usuario (ancho consistente por columna) ====== */
+
+/* La grilla del form usa columnas que pueden encoger sin empujar al vecino */
+.admin-card.form-grid{
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+}
+
+/* Las celdas del form y sus hijos pueden encoger y ocupar el 100% */
+.form-grid > .form-row{ min-width: 0; }
+.form-grid > .form-row > *{ min-width: 0; }
+
+/* Inputs/selects SIEMPRE llenan su columna (Rol, Área y Contraseña incluidos) */
+.form-grid .form-row input,
+.form-grid .form-row select,
+.form-grid .form-row textarea{
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+}
+
+/* Pequeño ajuste visual del select (flecha) para que no parezca más ancho */
+.form-row select{
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+}
+
+/* En pantallas chicas ya lo tienes a 1 columna; aseguramos que no se desborde */
+@media (max-width: 880px){
+  .admin-card.form-grid{ grid-template-columns: 1fr; }
+}
+
+/* ===== FIX específico: Crear usuario (ancho consistente + nota debajo) ===== */
+
+/* Las dos columnas del form se reparten al 50% y permiten encoger sin empujar */
+.admin-card.form-grid{
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  align-items: start;
+}
+
+/* Cada item de la grilla puede ocupar todo el ancho de su celda */
+.admin-card.form-grid > *{ min-width: 0; }
+
+/* Cualquier .hint suelta como hija directa del grid va EN UNA FILA COMPLETA debajo,
+   en lugar de comerse espacio a la derecha del campo. */
+.admin-card.form-grid > .hint{
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+
+/* Asegura que los campos llenen su columna (Rol, Área y Contraseña) */
+.form-grid .form-row{ width: 100%; align-self: stretch; }
+.form-grid .form-row input,
+.form-grid .form-row select{
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Flecha del select colocada sin afectar ancho visual */
+.form-row select{
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+}
+
+/* En pantallas chicas sigues con 1 columna, sin desbordes */
+@media (max-width: 880px){
+  .admin-card.form-grid{ grid-template-columns: 1fr; }
+}
+
