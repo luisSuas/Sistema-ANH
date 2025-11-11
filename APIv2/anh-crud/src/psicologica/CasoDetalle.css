@@ -1,5 +1,5 @@
 /* src/servicios/CasoDetalle.css */
-:root{
+:root[data-theme="dark"]{
   --bg:#0b0f14;
   --panel:#111823;
   --panel-2:#0e1520;
@@ -89,7 +89,7 @@
 .cd-spacer{ flex:1; }
 
 /* badges (mismos estilos que CasoNuevo) */
-.badge{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:#0e1520; color:var(--text); font-weight:700; }
+.badge{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--badge-bg); color:var(--text); font-weight:700; }
 .badge.dot::before{ content:""; width:8px; height:8px; border-radius:50%; background:currentColor; display:inline-block; }
 .badge.pendiente{ color:#f87171; }
 .badge.en_progreso{ color:#fbbf24; }

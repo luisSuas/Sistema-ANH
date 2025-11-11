@@ -34,7 +34,7 @@ export default function LegalHomeCoordinacion(){
       setCasos(Array.isArray(data)?data:[]);
     }catch(e){
       if (e?.response?.status===401){ setToken(null); navigate('/login'); return;}
-      setMsg('No se pudieron cargar los casos');
+      setMsg('No se pudieron cargar los procesos');
     }finally{ setLoading(false); }
   }
 
@@ -91,7 +91,7 @@ export default function LegalHomeCoordinacion(){
         <div className="legal-brand">ANH · Legal</div>
         <nav className="legal-nav">
           <button className={`nav-item ${tab==='revision'?'active':''}`} onClick={()=>setTab('revision')}>Revisión</button>
-          <button className={`nav-item ${tab==='casos'?'active':''}`} onClick={()=>setTab('casos')}>Casos</button>
+          <button className={`nav-item ${tab==='casos'?'active':''}`} onClick={()=>setTab('casos')}>Procesos</button>
         </nav>
         <div className="legal-userbox">
           <div className="legal-userline">{user?.nombre || 'Usuario'}</div>
@@ -102,7 +102,7 @@ export default function LegalHomeCoordinacion(){
 
       <div className="legal-main">
         <header className="legal-topbar">
-          <h1>{tab==='revision' ? 'Casos por revisión' : 'Casos del área'}</h1>
+          <h1>{tab==='revision' ? 'Procesos por revisión' : 'Procesos del área'}</h1>
           <div className="topbar-actions">
             <input className="input" placeholder="Buscar…" value={q} onChange={(e)=>setQ(e.target.value)} />
           </div>
@@ -127,7 +127,7 @@ export default function LegalHomeCoordinacion(){
                     </thead>
                     <tbody>
                       {pendFiltradas.length===0 && (
-                        <tr><td className="td-center" colSpan={5}>No hay casos pendientes</td></tr>
+                        <tr><td className="td-center" colSpan={5}>No hay procesos pendientes</td></tr>
                       )}
                       {pendFiltradas.map(c=>(
                         <tr key={c.id}>
@@ -135,7 +135,7 @@ export default function LegalHomeCoordinacion(){
                           <td>{c.codigo || '-'}</td>
                           <td><span className="badge dot pendiente">Pendiente</span></td>
                           <td>{formatFecha(c.fecha_atencion || c.fecha_creacion)}</td>
-                          <td style={{display:'flex', gap:8}}>
+                          <td className="coord-actions">
                             <button className="btn-secondary" onClick={()=>navigate(`/legal/casos/${c.id}`)}>Ver</button>
                             <button className="btn-green" onClick={()=>aprobar(c.id)}>Aprobar</button>
                             <button className="btn-danger" onClick={()=>devolver(c.id)}>Devolver</button>
@@ -166,7 +166,7 @@ export default function LegalHomeCoordinacion(){
                       </thead>
                       <tbody>
                       {valFiltradas.length===0 && (
-                        <tr><td className="td-center" colSpan={5}>No hay casos validados</td></tr>
+                        <tr><td className="td-center" colSpan={5}>No hay procesos validados</td></tr>
                       )}
                       {valFiltradas.map(c=>(
                         <tr key={c.id}>
@@ -174,7 +174,7 @@ export default function LegalHomeCoordinacion(){
                           <td>{c.codigo || '-'}</td>
                           <td><span className="badge dot validado">{norm(c.estado)==='enviado' ? 'Enviado' : 'Validado'}</span></td>
                           <td>{formatFecha(c.fecha_atencion || c.fecha_revision || c.fecha_creacion)}</td>
-                          <td style={{display:'flex', gap:8}}>
+                          <td className="coord-actions">
                             <button className="btn-secondary" onClick={()=>navigate(`/legal/casos/${c.id}`)}>Ver</button>
                             <button className="btn-primary" onClick={()=>pasarAProgreso(c.id)}>En Progreso</button>
                           </td>
@@ -200,7 +200,7 @@ export default function LegalHomeCoordinacion(){
                       </thead>
                       <tbody>
                       {progFiltradas.length===0 && (
-                        <tr><td className="td-center" colSpan={5}>No hay casos en progreso</td></tr>
+                        <tr><td className="td-center" colSpan={5}>No hay procesos en progreso</td></tr>
                       )}
                       {progFiltradas.map(c=>(
                         <tr key={c.id}>
@@ -208,7 +208,7 @@ export default function LegalHomeCoordinacion(){
                           <td>{c.codigo || '-'}</td>
                           <td><span className="badge dot en_progreso">En Progreso</span></td>
                           <td>{formatFecha(c.fecha_inicio || c.fecha_atencion || c.fecha_creacion)}</td>
-                          <td style={{display:'flex', gap:8}}>
+                          <td className="coord-actions">
                             <button className="btn-secondary" onClick={()=>navigate(`/legal/casos/${c.id}`)}>Ver</button>
                             <button className="btn-green" onClick={()=>completar(c.id)}>Completar</button>
                           </td>

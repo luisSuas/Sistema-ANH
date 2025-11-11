@@ -1,4 +1,4 @@
-:root{
+:root[data-theme="dark"]{
   /* misma paleta que CasoNuevo.css */
   --bg:#0b0f14;
   --panel:#111823;
@@ -122,8 +122,8 @@
   border-collapse:collapse;
 }
 .table thead th{
-  background:#0d1420;
-  color:#cdd7e6;
+  background:var(--table-head-bg);
+  color:var(--table-head-text);
   font-weight:800;
   border:1px solid var(--border);
   padding:10px 12px;

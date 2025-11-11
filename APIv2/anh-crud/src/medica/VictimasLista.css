@@ -1,5 +1,5 @@
 /* VictimasLista.css  —  estilo alineado con el tema oscuro del proyecto */
-:root{
+:root[data-theme="dark"]{
   --bg:#0b0f14;
   --panel:#111823;
   --panel-2:#0e1520;
@@ -165,7 +165,100 @@ h2{
 
 /* ===== Responsivo ===== */
 @media (max-width: 820px){
-  .acciones-cell{ flex-wrap:wrap; }
+  .acciones-top{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .acciones-cell{
+    flex-wrap:wrap;
+    justify-content:flex-start;
+    width:100%;
+    gap:12px;
+  }
+  .acciones-cell .btn,
+  .acciones-cell .btn-crear{
+    flex:0 1 calc(50% - 6px);
+    min-width: 160px;
+    max-width: 220px;
+  }
+}
+
+@media (max-width: 640px){
+  .acciones-top ~ table{
+    display:block;
+    background:transparent;
+    border:none;
+    box-shadow:none;
+  }
+  .acciones-top ~ table thead{
+    display:none;
+  }
+  .acciones-top ~ table tbody{
+    display:grid;
+    gap:14px;
+    padding:0;
+    margin:0;
+  }
+  .acciones-top ~ table tbody tr{
+    display:flex;
+    flex-direction:column;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .acciones-top ~ table tbody tr:hover{
+    background:var(--panel);
+  }
+  .acciones-top ~ table tbody td{
+    display:block;
+    border-bottom:1px solid var(--border);
+    padding:12px 14px;
+  }
+  .acciones-top ~ table tbody td:last-child{
+    border-bottom:none;
+  }
+  .acciones-top ~ table tbody td::before{
+    content:\"\"; /* se sobrescribe por nth-child */
+    display:block;
+    font-size:12px;
+    letter-spacing:.02em;
+    text-transform:uppercase;
+    font-weight:700;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
+  .acciones-top ~ table tbody td:nth-child(1)::before{ content:\"ID\"; }
+  .acciones-top ~ table tbody td:nth-child(2)::before{ content:\"Nombre completo\"; }
+  .acciones-top ~ table tbody td:nth-child(3)::before{ content:\"Telefono\"; }
+  .acciones-top ~ table tbody td:nth-child(4)::before{ content:\"Correo\"; }
+  .acciones-top ~ table tbody td:nth-child(5)::before{ content:\"Acciones\"; }
+  .acciones-top ~ table tbody td[colspan]::before{
+    content:none;
+  }
+  .acciones-top ~ table tbody td[colspan]{
+    text-align:center;
+  }
+  .acciones-top ~ table tbody td.acciones-cell{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    align-items:flex-start;
+  }
+  .acciones-cell{
+    gap:10px;
+  }
+  .acciones-cell .btn,
+  .acciones-cell .btn-crear{
+    width:auto;
+    min-width: 140px;
+    max-width: 220px;
+  }
+  .acciones-top ~ table tbody td.acciones-cell .badge{
+    align-self:flex-start;
+  }
 }
 
 /* ===== Modal simple para mostrar motivo ===== */

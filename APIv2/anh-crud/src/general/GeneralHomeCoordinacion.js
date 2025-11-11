@@ -30,6 +30,13 @@ function prevMonthBounds(date=new Date()){
   const d2 = new Date(date.getFullYear(), date.getMonth(), 0);
   return { start: ymd(d1), end: ymd(d2) };
 }
+
+function yearFromYMD(ymdStr){
+  // NO uses new Date('YYYY-MM-DD'); solo lee el año del string
+  const m = /^(\d{4})/.exec(String(ymdStr || '').trim());
+  return m ? Number(m[1]) : (new Date()).getFullYear();
+}
+
 function yearBounds(y = (new Date()).getFullYear()){
   const d1 = new Date(y, 0, 1);
   const d2 = new Date(y, 11, 31);
@@ -125,6 +132,14 @@ export default function GeneralHomeCoordinacion(){
     const suf = p.start && p.end ? `${p.start}_a_${p.end}` : `${Date.now()}`;
     await downloadBlob('/informes/excel/mensual', params, `${filenameHint}_${suf}.xlsx`);
   }
+// Excel ANUAL – usa el año del filtro "Desde" si no se pasa explícito
+async function downloadExcelAnual(year = null, filenameHint = 'reporte_anual'){
+  const y = (year != null) ? year : yearFromYMD(start);
+  const params = { year: y, area_id: areaId || undefined };
+  await downloadBlob('/informes/excel/anual', params, `${filenameHint}_${y}.xlsx`);
+}
+
+
 
   // CSV (se conserva lo que ya tenías)
   async function downloadCSV(customRange=null, filenameHint='informe_general'){
@@ -183,7 +198,7 @@ export default function GeneralHomeCoordinacion(){
 
       <div className="general-main">
         <header className="general-topbar">
-          <h1>{tab==='general' ? 'Informe General' : 'Resumen por Área'}</h1>
+          <h1>Panel de Coordinación General</h1>
           <div className="topbar-actions">
             {tab==='general' && (
               <input className="input" placeholder="Buscar en vista previa…" value={q} onChange={(e)=>setQ(e.target.value)} />
@@ -224,11 +239,20 @@ export default function GeneralHomeCoordinacion(){
                     <button className="btn-primary" onClick={()=>downloadExcelGeneral(null,'informe_general')} disabled={loading}>
                       Descargar Excel (General)
                     </button>
-                    {/* Conservamos CSV + ver JSON que ya tenías */}
-                    <button className="btn-secondary" onClick={()=>downloadCSV(null,'informe_general')} disabled={loading}>
-                      Descargar (CSV)
+                       {/* NUEVO: Excel mensual (agregado) según Desde/Hasta actuales */}
+                    <button  
+                      className="btn-primary" onClick={()=>downloadExcelMensual(null,'reporte_mensual')} disabled={loading}
+                    >
+                    Descargar Excel (Mensual)
                     </button>
-                    <button className="btn-secondary" onClick={fetchData} disabled={loading}>Ver JSON</button>
+                    <button
+  className="btn-primary"
+  onClick={()=>downloadExcelAnual(null,'reporte_anual')}
+  disabled={loading}
+>
+  Descargar Excel (Anual)
+</button>
+
                   </>
                 ) : (
                   <>
@@ -245,16 +269,12 @@ export default function GeneralHomeCoordinacion(){
             {/* Rápidos */}
             <div className="quick-range">
               <span className="muted">Rangos rápidos:</span>
-              <button className="chip" onClick={()=>{ setStart(rMesActual.start); setEnd(rMesActual.end); }}>{`Mes actual (${rMesActual.start} a ${rMesActual.end})`}</button>
-              <button className="chip" onClick={()=>{ setStart(rMesAnterior.start); setEnd(rMesAnterior.end); }}>{`Mes anterior (${rMesAnterior.start} a ${rMesAnterior.end})`}</button>
-              <button className="chip" onClick={()=>{ setStart(rAnioActual.start); setEnd(rAnioActual.end); }}>{`Año actual (${rAnioActual.start.slice(0,4)})`}</button>
-              <button className="chip" onClick={()=>{ setStart(rAnioAnterior.start); setEnd(rAnioAnterior.end); }}>{`Año anterior (${rAnioAnterior.start.slice(0,4)})`}</button>
 
               {/* NUEVOS: descargas rápidas del Excel agregado */}
               <button className="chip chip-download" onClick={()=>downloadExcelMensual(rMesActual,'reporte_mensual')}>Descargar mes actual (Excel)</button>
               <button className="chip chip-download" onClick={()=>downloadExcelMensual(rMesAnterior,'reporte_mensual_anterior')}>Descargar mes anterior (Excel)</button>
-              <button className="chip chip-download" onClick={()=>downloadExcelMensual(rAnioActual,'reporte_anual')}>Descargar año actual (Excel)</button>
-              <button className="chip chip-download" onClick={()=>downloadExcelMensual(rAnioAnterior,'reporte_anual_anterior')}>Descargar año anterior (Excel)</button>
+              <button className="chip chip-download" onClick={()=>downloadExcelAnual(yearFromYMD(rAnioActual.start),'reporte_anual')}>Descargar año actual (Excel)</button>
+              <button className="chip chip-download" onClick={()=>downloadExcelAnual(yearFromYMD(rAnioAnterior.start),'reporte_anual_anterior')}>Descargar año anterior (Excel)</button>
             </div>
           </section>
 
@@ -264,7 +284,7 @@ export default function GeneralHomeCoordinacion(){
           {tab==='general' ? (
             <section className="card">
               <div className="card-header">
-                <h3>Vista previa (JSON)</h3>
+                <h3>Vista previa</h3>
                 <div className="muted">
                   Solo se descargan <strong>COMPLETADOS</strong> en Excel. Fuente: <code>informe_coordinacion_general</code>
                 </div>

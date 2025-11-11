@@ -1,7 +1,7 @@
 /* =========================================================
    Paleta y base
    ========================================================= */
-:root{
+:root[data-theme="dark"]{
   --bg: #0b1220;
   --panel: #0f172a;
   --muted: #9aa4b2;
@@ -152,7 +152,7 @@ html, body {
   cursor:pointer;
   transition: transform .04s ease, filter .15s ease, background .15s ease;
 }
-.btn:hover { background:#0f172a; }
+.btn:hover { background:var(--panel); }
 .btn:active { transform: translateY(1px); }
 
 .btn-primary{

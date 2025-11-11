@@ -83,7 +83,7 @@ export default function CasoNuevo() {
   // ===== Prellenar victima_id desde ?victima_id=
   useEffect(() => {
     const q = new URLSearchParams(search);
-    const v = q.get("victima_id");
+    const v = q.get("sobreviviente_id");
     if (v && !form.victima_id) {
       setForm((f) => ({ ...f, victima_id: v }));
     }
@@ -298,7 +298,7 @@ export default function CasoNuevo() {
 
     const vId = Number(form.victima_id);
     if (!Number.isInteger(vId) || vId <= 0) {
-      setMsg("Debes indicar la víctima (ID).");
+      setMsg("Debes indicar la sobreviviente (ID).");
       return;
     }
 
@@ -389,7 +389,7 @@ export default function CasoNuevo() {
           <Link to="/legal" className="cn-back">
             ← Volver
           </Link>
-          <h2>Nuevo caso</h2>
+          <h2>Nuevo proceso</h2>
           <p className="cn-muted">
             Área (desde token):{" "}
             <strong>{String(areaIdFromToken || "-")}</strong>
@@ -405,7 +405,7 @@ export default function CasoNuevo() {
           <Row>
             <Col>
               <Label>
-                Víctima (ID) <Req />
+                Sobreviviente (ID) <Req />
               </Label>
               <input
                 name="victima_id"
@@ -415,7 +415,7 @@ export default function CasoNuevo() {
                 required
               />
               <small className="cn-help">
-               ¿No la sabes? Ve a <Link to="/legal/victimas">Víctimas</Link>{" "}
+               ¿No la sabes? Ve a <Link to="/legal/victimas">Sobrevivientes</Link>{" "}
                 y copia el ID.
               </small>
             </Col>
@@ -885,7 +885,7 @@ export default function CasoNuevo() {
                   />
                 </Col>
                 <Col>
-                  <Label>Relación con la víctima</Label>
+                  <Label>Relación con la sobreviviente</Label>
                   <select
                     value={a.relacion_agresor_id}
                     onChange={(e) =>
@@ -954,11 +954,11 @@ export default function CasoNuevo() {
             onClick={irDetalle}
             title={
               casoId
-                ? `Ir al detalle del caso #${casoId}`
+                ? `Ir al detalle del proceso #${casoId}`
                 : "Primero guarda el borrador"
             }
           >
-            Ir al detalle del caso
+            Ir al detalle del proceso
           </button>
         </div>
       </form>

@@ -1,0 +1,115 @@
+.theme-fab{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 9999;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Píldora */
+.theme-toggle{
+  position: relative;
+  width: 64px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--toggle-track-light);                /* claro: track gris */
+  padding: 3px;
+  cursor: pointer;
+  transition: background .25s ease, border-color .25s ease;
+  box-shadow: var(--shadow, 0 8px 24px rgba(0,0,0,.15)) inset;
+}
+
+/* Track en dark */
+.theme-toggle.is-dark{
+  background: var(--toggle-track-dark);                 /* gris oscuro */
+  border-color: var(--line);
+}
+
+/* Botón redondo (knob) */
+.theme-toggle .knob{
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 28px;
+  height: 28px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  transition: transform .25s cubic-bezier(.4,0,.2,1), background-color .25s;
+}
+
+/* Icono con emoji (ligero y nítido) */
+.theme-toggle .knob::after{
+  content: "☀️";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+}
+
+/* Estado oscuro: knob a la derecha + luna */
+.theme-toggle.is-dark .knob{
+  transform: translateX(30px);
+}
+.theme-toggle.is-dark .knob::after{
+  content: "🌙";
+}
+
+/* Chip para "Auto" (seguir sistema) */
+.theme-auto-chip{
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  transition: filter .2s ease;
+}
+.theme-auto-chip:hover{ filter: brightness(1.05); }
+.theme-auto-chip.active{
+  outline: 2px solid rgba(59,130,246,.5);
+  outline-offset: 2px;
+}
+
+
+/* ────────────────────────────────────────────────
+   (2) Carril superior seguro para el FAB
+   Cuando el JS agrega .with-fab-top al <html>,
+   reservamos padding-right en topbars/header para
+   que el switch no los tape.
+   ──────────────────────────────────────────────── */
+:root{
+  /* 64px (switch) + 12px (gap) + 56px aprox del chip "Auto" + 16px margen derecho */
+  --fab-safe-pr: calc(64px + 12px + 56px + 16px);
+}
+
+/* Ajusta aquí las barras superiores que uses */
+.with-fab-top header,
+.with-fab-top .medica-topbar,
+.with-fab-top .general-topbar,
+.with-fab-top .admin-topbar,
+.with-fab-top .albergue-topbar,
+.with-fab-top .legal-topbar,
+.with-fab-top .psicologica-topbar{
+  padding-right: max(var(--fab-safe-pr), 112px);
+}
+
+/* En móviles el chip ocupa casi todo el ancho de la esquina */
+@media (max-width: 640px){
+  .with-fab-top header,
+  .with-fab-top .medica-topbar,
+  .with-fab-top .general-topbar,
+  .with-fab-top .admin-topbar,
+  .with-fab-top .albergue-topbar,
+  .with-fab-top .legal-topbar,
+  .with-fab-top .psicologica-topbar{
+    padding-right: max(88px, 8vw);
+  }
+}
+
+/* (Opcional) marca rápida para evitar-tapado sin JS extra */
+.avoid-fab{ position: relative; }

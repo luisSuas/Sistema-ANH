@@ -1,4 +1,26 @@
-:root{
+/* Forzar layout móvil también en <=640px */
+@media (max-width: 640px){
+  .coord-actions{
+    flex-direction:column;
+    align-items:stretch;
+    gap:10px;
+  }
+  .coord-actions > *{
+    flex:1 1 100% !important;
+    width:100% !important;
+    max-width:none !important;
+  }
+  .coord-actions > .btn-primary,
+  .coord-actions > .btn-secondary,
+  .coord-actions > .btn-green,
+  .coord-actions > .btn-danger{
+    width:100% !important;
+    min-height:48px;
+    padding:12px 16px;
+    font-size:16px;
+  }
+}
+:root[data-theme="dark"]{
   /* paleta consistente con Operativo y CasoNuevo */
   --bg:#0b0f14;
   --panel:#111823;
@@ -29,7 +51,7 @@
 
 /* ========= Sidebar ========= */
 .social-sidebar{
-  background:linear-gradient(180deg, #0f172a, #0b1320);
+  background:var(--sidebar-gradient);
   color:#fff;
   padding:16px;
   display:flex;
@@ -99,27 +121,188 @@
 }
 
 /* ========= Buttons ========= */
-.btn-primary, .btn-secondary{ border:0; border-radius:10px; cursor:pointer; font-weight:700; }
-.btn-primary{ background:var(--primary); color:#fff; padding:10px 14px; box-shadow:var(--shadow); }
-.btn-primary:hover{ background:var(--primary-600); }
-.btn-secondary{ background:var(--cyan); color:#041019; padding:8px 12px; }
-.btn-secondary:hover{ filter:brightness(.95); }
+.btn-primary,
+.btn-secondary,
+.btn-green,
+.btn-danger{
+  border-radius:12px;
+  border:1px solid transparent;
+  cursor:pointer;
+  font-weight:700;
+  padding:9px 16px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  min-width:120px;
+  letter-spacing:.01em;
+  transition:transform .12s ease, box-shadow .18s ease, filter .18s ease, background .18s ease, border-color .18s ease;
+}
 
-/* Verde/rojo como en CasoNuevo.css */
-.btn-green, .btn-danger{ border-radius:10px; padding:8px 12px; font-weight:700; cursor:pointer; border:1px solid transparent; }
-.btn-green{ background:var(--green); color:#0b0f14; }
-.btn-green:hover{ background:var(--green-600); color:#051018; }
-.btn-danger{ background:var(--red); color:#fff; }
-.btn-danger:hover{ background:var(--red-600); }
+.btn-secondary{
+  background: var(--panel-2);
+  color: var(--text);
+  border:1px solid var(--border);
+  box-shadow:0 8px 18px rgba(15,23,42,.2);
+}
+.btn-secondary:hover{
+  border-color: var(--primary);
+  box-shadow:0 12px 26px rgba(59,130,246,.25);
+  transform:translateY(-1px);
+}
+
+.btn-primary{
+  background: linear-gradient(180deg, var(--primary), var(--primary-600));
+  color:#fff;
+  box-shadow:0 12px 28px -10px rgba(37,99,235,.45);
+}
+.btn-primary:hover{
+  filter:brightness(1.06);
+  transform:translateY(-1px);
+}
+
+.btn-green{
+  background: linear-gradient(180deg, var(--green), var(--green-600));
+  color:#041b10;
+  box-shadow:0 12px 26px -12px rgba(34,197,94,.55);
+}
+.btn-green:hover{
+  filter:brightness(1.05);
+  transform:translateY(-1px);
+}
+
+.btn-danger{
+  background: linear-gradient(180deg, var(--red), var(--red-600));
+  color:#fff;
+  box-shadow:0 12px 26px -12px rgba(239,68,68,.55);
+}
+.btn-danger:hover{
+  filter:brightness(1.04);
+  transform:translateY(-1px);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-green:disabled,
+.btn-danger:disabled{
+  opacity:.65;
+  cursor:not-allowed;
+  transform:none;
+  box-shadow:none;
+}
+
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-green:focus-visible,
+.btn-danger:focus-visible{
+  outline:2px solid rgba(59,130,246,.45);
+  outline-offset:3px;
+}
+
+.coord-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:stretch;
+  justify-content:flex-start;
+}
+.coord-actions > *{
+  flex:1 1 calc(50% - 8px);
+  width:calc(50% - 8px);
+  min-width:140px;
+  max-width:200px;
+}
+
+@media (max-width: 360px){
+  .coord-actions{
+    gap:6px;
+  }
+  .coord-actions > *{
+    flex:1 1 calc(50% - 6px);
+    width:calc(50% - 6px);
+    min-width:128px;
+  }
+}
+
+/* Mejor apilado y tamaño táctil en móviles pequeños */
+@media (max-width: 480px){
+  .coord-actions{
+    gap:8px;
+  }
+  .coord-actions > *{
+    flex:1 1 100%;
+    width:100%;
+    max-width:none;
+  }
+  .coord-actions > .btn-primary,
+  .coord-actions > .btn-secondary,
+  .coord-actions > .btn-green,
+  .coord-actions > .btn-danger{
+    width:100%;
+    min-height:44px;
+    padding:12px 16px;
+    font-size:16px;
+  }
+}
 
 /* ========= Alerts & table ========= */
 .alert-info{ background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.35); color:var(--text); padding:10px; border-radius:10px; }
 .table-wrap{ overflow-x:auto; }
 .table{ min-width:760px; width:100%; border-collapse:collapse; }
 .table th, .table td{ text-align:left; padding:10px 12px; border:1px solid var(--border); }
-.table thead th{ background:#0d1420; color:#cdd7e6; font-weight:700; }
+.table thead th{ background:var(--table-head-bg); color:var(--table-head-text); font-weight:700; }
 .td-center{ text-align:center; padding:12px; border:1px solid var(--border); }
 .pad{ padding:8px; }
+
+/* ===== Tabla responsiva (similar a VictimasLista) ===== */
+@media (max-width: 640px){
+  .table{ min-width:0; width:100%; border-collapse:separate; border-spacing:0; background:transparent; }
+  .table thead{ display:none; }
+  .table tbody{ display:grid; gap:14px; padding:0; margin:0; }
+  .table tbody tr{ display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+  .table tbody td{ display:block; border-bottom:1px solid var(--border); }
+  .table tbody td:last-child{ border-bottom:none; }
+  .table tbody td::before{
+    content:"";
+    display:block; font-size:12px; letter-spacing:.02em; text-transform:uppercase; font-weight:700; color:var(--muted); margin-bottom:4px;
+  }
+  .table tbody td:nth-child(1)::before{ content:"ID"; }
+  .table tbody td:nth-child(2)::before{ content:"Código"; }
+  .table tbody td:nth-child(3)::before{ content:"Estado"; }
+  .table tbody td:nth-child(4)::before{ content:"Fecha"; }
+  .table tbody td:nth-child(5)::before{ content:"Acciones"; }
+  .table tbody td.coord-actions::before{ content:"Acciones"; }
+  .table tbody td.coord-actions{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+    align-items:stretch;
+  }
+  .table tbody td.coord-actions button{
+    display:flex !important;
+    align-items:center;
+    justify-content:center;
+    width:100% !important;
+    min-height:48px;
+    min-width:0 !important;
+    box-sizing:border-box;
+    text-align:center;
+    white-space:nowrap;
+  }
+  .table tbody td.coord-actions > *{
+    width:100% !important;
+    max-width:none !important;
+    display:block;
+  }
+  .coord-actions button{
+    display:flex !important;
+    align-items:center;
+    justify-content:center;
+    width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box;
+  }
+}
 
 /* ========= Badges ========= */
 .badge{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); font-weight:800; }

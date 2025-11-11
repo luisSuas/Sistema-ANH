@@ -2,6 +2,7 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
+import ThemeToggle from "./components/ThemeToggle";
 import AdminUserCreate from "./Admin/AdminUserCreate";
 
 import { AuthProvider, useAuth } from "./auth/AuthContext";
@@ -186,10 +187,11 @@ function AppRoutes() {
   );
 }
 
-export default function App() {
-  return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
-  );
-}
+ export default function App() {
+   return (
+     <AuthProvider>
+       <AppRoutes />
+        <ThemeToggle float="top" showAuto />
+     </AuthProvider>
+   );
+ }

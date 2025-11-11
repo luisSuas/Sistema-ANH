@@ -83,7 +83,7 @@ function AlbergueHome() {
         navigate('/login');
         return;
       }
-      setMsg('No se pudieron cargar los casos');
+      setMsg('No se pudieron cargar los procesos');
     } finally {
       setLoading(false);
     }
@@ -142,7 +142,7 @@ function AlbergueHome() {
         fetchCasos();
       }
     } catch (e) {
-      setMsg(e?.response?.data?.error || 'No se pudo crear el caso');
+      setMsg(e?.response?.data?.error || 'No se pudo crear el proceso');
     }
   }
 
@@ -152,7 +152,7 @@ function AlbergueHome() {
     setVForm(f => ({ ...f, [name]: value }));
   }
 
-  async function registrarVictima(e) {
+  async function registrarsobreviviente(e) {
     e.preventDefault();
     if (creandoVictima) return;
 
@@ -204,20 +204,20 @@ function AlbergueHome() {
 
       const id = data?.id;
       setVictimaId(id || null);
-      setMsgVictima(id ? `Víctima creada con ID #${id}.` : 'Víctima creada.');
+      setMsgVictima(id ? `Sobreviviente creada con ID #${id}.` : 'Sobreviviente creada.');
     } catch (e) {
       const detail = e?.response?.data?.detail || '';
       if (detail.toLowerCase().includes('dpi')) {
         setMsgVictima('El DPI ya existe o no es válido.');
       } else {
-        setMsgVictima(e?.response?.data?.error || 'No se pudo registrar la víctima.');
+        setMsgVictima(e?.response?.data?.error || 'No se pudo registrar la sobreviviente.');
       }
     } finally {
       setCreandoVictima(false);
     }
   }
 
-  function registrarOtraVictima() {
+  function registrarOtrasobreviviente() {
     setVForm({
       nombres: '',
       apellidos: '',
@@ -264,7 +264,7 @@ function AlbergueHome() {
         <div className="albergue-brand">ANH · Albergue</div>
         <nav className="albergue-nav">
           <NavItem to="/albergue" label="Dashboard" />
-          <NavItem to="/albergue/victimas" label="Víctimas" />
+          <NavItem to="/albergue/victimas" label="Sobrevivientes" />
         </nav>
         <div className="albergue-userbox">
           <div className="albergue-userline">{userFromToken?.nombre || 'Usuario'}</div>
@@ -291,8 +291,8 @@ function AlbergueHome() {
 
           {/* KPIs */}
           <section className="kpi-grid">
-            <Kpi title="Casos abiertos" value={kpis.abiertos} />
-            <Kpi title="En proceso" value={kpis.en_proceso} />
+            <Kpi title="Procesos abiertos" value={kpis.abiertos} />
+            <Kpi title="En curso" value={kpis.en_proceso} />
             <Kpi title="Cerrados" value={kpis.cerrados} />
             <Kpi title="Total" value={kpis.total} />
           </section>
@@ -300,14 +300,14 @@ function AlbergueHome() {
           {/* ===== Registrar víctima (AMPLIADO) ===== */}
           <section className="card">
             <div className="card-header">
-              <h3>Registrar víctima</h3>
+              <h3>Registrar Sobreviviente</h3>
               <div className="card-actions">
                 {victimaId && (
                   <button
                     className="btn-primary"
                     onClick={() => navigate(`/albergue/casos/nuevo?victima_id=${victimaId}`)}
                   >
-                    Crear caso con ID #{victimaId}
+                    Crear proceso con ID #{victimaId}
                   </button>
                 )}
               </div>
@@ -315,7 +315,7 @@ function AlbergueHome() {
 
             {msgVictima && <div className="alert-info">{msgVictima}</div>}
 
-            <form onSubmit={registrarVictima}>
+            <form onSubmit={registrarsobreviviente}>
               {/* fila 1: nombres/apellidos/sexo */}
               <div className="form-row">
                 <input
@@ -456,10 +456,10 @@ function AlbergueHome() {
 
               <div className="card-actions" style={{ marginTop: 8 }}>
                 <button className="btn-primary" disabled={creandoVictima}>
-                  {creandoVictima ? 'Guardando…' : 'Registrar víctima'}
+                  {creandoVictima ? 'Guardando…' : 'Registrar sobreviviente'}
                 </button>
                 {victimaId && (
-                  <button type="button" className="btn-secondary" onClick={registrarOtraVictima}>
+                  <button type="button" className="btn-secondary" onClick={registrarOtrasobreviviente}>
                     Registrar otra
                   </button>
                 )}
@@ -467,21 +467,21 @@ function AlbergueHome() {
             </form>
 
             <div className="muted mt-2">
-              Luego de registrar, puedes crear el caso con el botón de arriba (se pasa el ID automáticamente).
+              Luego de registrar, puedes crear el proceso con el botón de arriba (se pasa el ID automáticamente).
             </div>
           </section>
 
           {/* ===== Nuevo caso (atajo) ===== */}
           <section className="card">
             <div className="card-header">
-              <h3>Nuevo caso</h3>
+              <h3>Nuevo proceso</h3>
               <div className="card-actions">
-                <Link to="/albergue/casos/nuevo" className="btn-primary">+ Nuevo caso</Link>
+                <Link to="/albergue/casos/nuevo" className="btn-primary">+ Nuevo proceso</Link>
               </div>
             </div>
 
             <details className="details-quick">
-              <summary className="summary-quick">Atajo rápido (ID de víctima y área)</summary>
+              <summary className="summary-quick">Atajo rápido (ID de sobreviviente y área)</summary>
               <div className="quick-body">
                 <form className="form-row" onSubmit={crearCasoRapido}>
                   <input name="victima_id" value={nuevo.victima_id} onChange={handleChangeCaso} placeholder="victima_id" required />
@@ -489,7 +489,7 @@ function AlbergueHome() {
                   <button className="btn-primary">Crear</button>
                 </form>
                 <div className="muted">
-                  ¿No recuerdas el ID? <Link className="link" to="/albergue/victimas">Ver víctimas / copiar ID</Link>
+                  ¿No recuerdas el ID? <Link className="link" to="/albergue/victimas">Ver sobrevivientes / copiar ID</Link>
                 </div>
               </div>
             </details>
@@ -498,7 +498,7 @@ function AlbergueHome() {
           {/* ===== Búsqueda + tabla ===== */}
           <section className="card">
             <div className="card-header">
-              <h3>Casos recientes</h3>
+              <h3>Procesos recientes</h3>
               <div className="card-header-right">
                 <select className="input" value={estadoFiltro} onChange={(e)=>setEstadoFiltro(e.target.value)}>
                   <option value="">Todos los estados</option>
@@ -532,7 +532,7 @@ function AlbergueHome() {
                     {casosFiltrados.length === 0 && (
                       <tr>
                         <td className="td-center" colSpan={6}>
-                          Sin casos · <Link to="/albergue/casos/nuevo" className="link">Crear el primero</Link>
+                          Sin procesos · <Link to="/albergue/casos/nuevo" className="link">Crear el primero</Link>
                         </td>
                       </tr>
                     )}

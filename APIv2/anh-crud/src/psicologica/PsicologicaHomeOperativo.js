@@ -30,7 +30,7 @@ function PsicologicaHome() {
   // Notas de devolución para casos en borrador (id -> texto)
   const [notasDev, setNotasDev] = useState({});
 
-  // ======= Form Registrar Víctima (ampliado) =======
+  // ======= Form Registrar sobreviviente (ampliado) =======
   const [cat, setCat] = useState({ estados: [], escolaridades: [], etnias: [] });
 
   const [vForm, setVForm] = useState({
@@ -83,7 +83,7 @@ function PsicologicaHome() {
         navigate('/login');
         return;
       }
-      setMsg('No se pudieron cargar los casos');
+      setMsg('No se pudieron cargar los procesos');
     } finally {
       setLoading(false);
     }
@@ -142,11 +142,11 @@ function PsicologicaHome() {
         fetchCasos();
       }
     } catch (e) {
-      setMsg(e?.response?.data?.error || 'No se pudo crear el caso');
+      setMsg(e?.response?.data?.error || 'No se pudo crear el proceso');
     }
   }
 
-  // ======= Registrar víctima (ampliado) =======
+  // ======= Registrar sobreviviente (ampliado) =======
   function onVictimaChange(e) {
     const { name, value } = e.target;
     setVForm(f => ({ ...f, [name]: value }));
@@ -204,13 +204,13 @@ function PsicologicaHome() {
 
       const id = data?.id;
       setVictimaId(id || null);
-      setMsgVictima(id ? `Víctima creada con ID #${id}.` : 'Víctima creada.');
+      setMsgVictima(id ? `Sobreviviente creada con ID #${id}.` : 'Sobreviviente creada.');
     } catch (e) {
       const detail = e?.response?.data?.detail || '';
       if (detail.toLowerCase().includes('dpi')) {
         setMsgVictima('El DPI ya existe o no es válido.');
       } else {
-        setMsgVictima(e?.response?.data?.error || 'No se pudo registrar la víctima.');
+        setMsgVictima(e?.response?.data?.error || 'No se pudo registrar la sobreviviente.');
       }
     } finally {
       setCreandoVictima(false);
@@ -264,7 +264,7 @@ function PsicologicaHome() {
         <div className="social-brand">ANH · Psicológica</div>
         <nav className="social-nav">
           <NavItem to="/psicologica" label="Dashboard" />
-          <NavItem to="/psicologica/victimas" label="Víctimas" />
+          <NavItem to="/psicologica/victimas" label="Sobrevivientes" />
         </nav>
         <div className="social-userbox">
           <div className="social-userline">{userFromToken?.nombre || 'Usuario'}</div>
@@ -291,23 +291,23 @@ function PsicologicaHome() {
 
           {/* KPIs */}
           <section className="kpi-grid">
-            <Kpi title="Casos abiertos" value={kpis.abiertos} />
-            <Kpi title="En proceso" value={kpis.en_proceso} />
+            <Kpi title="Procesos abiertos" value={kpis.abiertos} />
+            <Kpi title="En curso" value={kpis.en_proceso} />
             <Kpi title="Cerrados" value={kpis.cerrados} />
             <Kpi title="Total" value={kpis.total} />
           </section>
 
-          {/* ===== Registrar víctima (AMPLIADO) ===== */}
+          {/* ===== Registrar sobreviviente (AMPLIADO) ===== */}
           <section className="card">
             <div className="card-header">
-              <h3>Registrar víctima</h3>
+              <h3>Registrar sobreviviente</h3>
               <div className="card-actions">
                 {victimaId && (
                   <button
                     className="btn-primary"
                     onClick={() => navigate(`/psicologica/casos/nuevo?victima_id=${victimaId}`)}
                   >
-                    Crear caso con ID #{victimaId}
+                    Crear proceso con ID #{victimaId}
                   </button>
                 )}
               </div>
@@ -456,7 +456,7 @@ function PsicologicaHome() {
 
               <div className="card-actions" style={{ marginTop: 8 }}>
                 <button className="btn-primary" disabled={creandoVictima}>
-                  {creandoVictima ? 'Guardando…' : 'Registrar víctima'}
+                  {creandoVictima ? 'Guardando…' : 'Registrar sobreviviente'}
                 </button>
                 {victimaId && (
                   <button type="button" className="btn-secondary" onClick={registrarOtraVictima}>
@@ -467,29 +467,29 @@ function PsicologicaHome() {
             </form>
 
             <div className="muted mt-2">
-              Luego de registrar, puedes crear el caso con el botón de arriba (se pasa el ID automáticamente).
+              Luego de registrar, puedes crear el proceso con el botón de arriba (se pasa el ID automáticamente).
             </div>
           </section>
 
-          {/* ===== Nuevo caso (atajo) ===== */}
+          {/* ===== Nuevo proceso (atajo) ===== */}
           <section className="card">
             <div className="card-header">
-              <h3>Nuevo caso</h3>
+              <h3>Nuevo proceso</h3>
               <div className="card-actions">
-                <Link to="/psicologica/casos/nuevo" className="btn-primary">+ Nuevo caso</Link>
+                <Link to="/psicologica/casos/nuevo" className="btn-primary">+ Nuevo proceso</Link>
               </div>
             </div>
 
             <details className="details-quick">
-              <summary className="summary-quick">Atajo rápido (ID de víctima y área)</summary>
+              <summary className="summary-quick">Atajo rápido (ID de sobreviviente y área)</summary>
               <div className="quick-body">
                 <form className="form-row" onSubmit={crearCasoRapido}>
-                  <input name="victima_id" value={nuevo.victima_id} onChange={handleChangeCaso} placeholder="victima_id" required />
+                  <input name="victima_id" value={nuevo.victima_id} onChange={handleChangeCaso} placeholder="sobreviviente_id" required />
                   <input name="area_id" value={nuevo.area_id} onChange={handleChangeCaso} placeholder="area_id" required />
                   <button className="btn-primary">Crear</button>
                 </form>
                 <div className="muted">
-                  ¿No recuerdas el ID? <Link className="link" to="/psicologica/victimas">Ver víctimas / copiar ID</Link>
+                  ¿No recuerdas el ID? <Link className="link" to="/psicologica/victimas">Ver sobrevivientes / copiar ID</Link>
                 </div>
               </div>
             </details>
@@ -498,7 +498,7 @@ function PsicologicaHome() {
           {/* ===== Búsqueda + tabla ===== */}
           <section className="card">
             <div className="card-header">
-              <h3>Casos recientes</h3>
+              <h3>Procesos recientes</h3>
               <div className="card-header-right">
                 <select className="input" value={estadoFiltro} onChange={(e)=>setEstadoFiltro(e.target.value)}>
                   <option value="">Todos los estados</option>
@@ -532,7 +532,7 @@ function PsicologicaHome() {
                     {casosFiltrados.length === 0 && (
                       <tr>
                         <td className="td-center" colSpan={6}>
-                          Sin casos · <Link to="/psicologica/casos/nuevo" className="link">Crear el primero</Link>
+                          Sin procesos · <Link to="/psicologica/casos/nuevo" className="link">Crear el primero</Link>
                         </td>
                       </tr>
                     )}

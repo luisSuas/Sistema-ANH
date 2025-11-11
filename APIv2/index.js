@@ -3326,6 +3326,8 @@ async function computeMensualFixes(start, end, areaId){
 // Resumen por área (cuentas por estado)  -> GET /apiv2/informes/resumen
 // params: start=YYYY-MM-DD, end=YYYY-MM-DD, [area_id]
 // ─────────────────────────────────────────────────────────────────────────────
+
+
 async function hasColumn(table, column) {
   try {
     const { rows } = await pool.query(
@@ -3393,6 +3395,21 @@ app.get('/apiv2/informes/resumen', authMiddleware, async (req, res) => {
   }
 });
 
+// Detecta cómo se llama realmente la tabla de fuentes (y en 'public')
+async function detectFuenteRefTable() {
+  const { rows } = await pool.query(`
+    SELECT t
+    FROM (VALUES
+      ('public.fuentes_referencia'),
+      ('public.fuentes_referencias'),
+      ('public.fuente_referencia'),
+      ('public.fuente_referencias')
+    ) AS v(t)
+    WHERE to_regclass(t) IS NOT NULL
+    LIMIT 1
+  `);
+  return rows[0]?.t || null; // p.ej. 'public.fuentes_referencias' o null
+}
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3523,56 +3540,151 @@ app.get('/apiv2/informes/excel/general', authMiddleware, async (req, res) => {
     const { role, area } = req.user;
     const { start, end, area_id } = req.query;
 
+    // 1) Detectar tabla real de fuentes (si existe)
+    const frTable = await detectFuenteRefTable();                       // puede ser null
+const frJoin  = frTable ? `LEFT JOIN ${frTable} fr ON fr.id = c.fuente_referencia_id` : '';
+
+
+    // 2) WHERE sobre la vista (alias ig)
     const where = [];
     const vals  = [];
     let idx = 1;
 
-    if (start) { where.push(`fecha_atencion::date >= $${idx++}`); vals.push(start); }
-    if (end)   { where.push(`fecha_atencion::date <= $${idx++}`); vals.push(end); }
+    if (start) { where.push(`ig.fecha_atencion::date >= $${idx++}`); vals.push(start); }
+    if (end)   { where.push(`ig.fecha_atencion::date <= $${idx++}`); vals.push(end); }
 
     if (role === ROLES.COORD_GENERAL) {
-      if (area_id) { where.push(`area_id = $${idx++}`); vals.push(Number(area_id)); }
+      if (area_id) { where.push(`ig.area_id = $${idx++}`); vals.push(Number(area_id)); }
     } else {
-      where.push(`area_id = $${idx++}`); vals.push(area);
+      where.push(`ig.area_id = $${idx++}`); vals.push(area);
     }
 
-    where.push(`estado = 'completado'`);
+    where.push(`ig.estado = 'completado'`);
 
+    // 3) JOIN dinámico a la tabla de fuentes (si existe)
+    const FR_JOIN = frTable ? `LEFT JOIN ${frTable} fr ON fr.id = c.fuente_referencia_id` : ``;
+
+    // 4) Expresión de “Quién refiere” (con regex doble backslash)
+    const QUIEN_REFIERE_EXPR = frTable
+      ? `COALESCE(
+           NULLIF(CASE WHEN ig.quien_refiere ~* '^\\\\s*id\\\\s*\\\\d+\\\\s*$' THEN NULL ELSE TRIM(ig.quien_refiere) END,''),
+           NULLIF(TRIM(c.fuente_referencia_otro),''),
+           NULLIF(TRIM(fr.nombre),'')
+         )`
+      : `COALESCE(
+           NULLIF(CASE WHEN ig.quien_refiere ~* '^\\\\s*id\\\\s*\\\\d+\\\\s*$' THEN NULL ELSE TRIM(ig.quien_refiere) END,''),
+           NULLIF(TRIM(c.fuente_referencia_otro),'')
+         )`;
+
+    // 5) SQL final (agregamos victimas v para direccion_actual)
     const sql = `
       SELECT
-        no_orden,
-        nombre_persona,
-        cui,
-        fecha_nacimiento,
-        sexo,
-        edad_anios   AS edad,
-        estado_civil,
-        lugar_origen,
-        escolaridad,
-        motivo_consulta,
-        tipos_violencia,
-        fecha_atencion,
-        fecha_atencion_dia,
-        fecha_atencion_mes,
-        fecha_atencion_anio,
-        hijos,
-        etnia,
-        nacionalidad,
-        residencia,
-        quien_refiere,
-        a_donde_se_refiere,
-        interna_externa,
-        persona_que_agrede,
-        acciones,
-        direccion,
-        telefono,
-        area_id,
-        estado
-      FROM informe_coordinacion_general
-      ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-      ORDER BY fecha_atencion DESC, no_orden DESC
+  ig.no_orden,
+  ig.nombre_persona,
+  ig.cui,
+  ig.fecha_nacimiento,
+  ig.sexo,
+  ig.edad_anios   AS edad,
+  ig.estado_civil,
+  ig.lugar_origen,
+  ig.escolaridad,
+  ig.motivo_consulta,
+  ig.tipos_violencia,
+  ig.fecha_atencion,
+  ig.fecha_atencion_dia,
+  ig.fecha_atencion_mes,
+  ig.fecha_atencion_anio,
+  ig.hijos,
+  hj.hijos_tbl_nombres,
+  hj.hijos_tbl_sexos,
+  hj.hijos_tbl_edades,
+  ig.etnia,
+  ig.nacionalidad,
+  ig.residencia,
+
+  /* QUIÉN REFIERE: vista -> "otro" -> catálogo (si existe) */
+  COALESCE(
+    NULLIF(
+      CASE WHEN ig.quien_refiere ~* '^\s*id\s*\d+\s*$' THEN NULL ELSE TRIM(ig.quien_refiere) END,''
+    ),
+    NULLIF(TRIM(c.fuente_referencia_otro),''),
+    ${frTable ? `NULLIF(TRIM(fr.nombre),'')` : `NULL`}
+  ) AS quien_refiere,
+
+  /* A DÓNDE SE REFIERE: vista -> internas (otro/lista) -> externas (otro/lista) */
+  COALESCE(
+    NULLIF(TRIM(ig.a_donde_se_refiere),''),
+    NULLIF(TRIM(c.ref_interna_otro),''),
+    NULLIF(TRIM(ri.refs_internas),''),
+    NULLIF(TRIM(c.ref_externa_otro),''),
+    NULLIF(TRIM(re.refs_externas),'')
+  ) AS a_donde_se_refiere,
+
+    /* Desglose para el grupo "A dónde se refiere" */
+  COALESCE(NULLIF(TRIM(c.ref_interna_otro),''), NULLIF(TRIM(ri.refs_internas),'')) AS ref_interna,
+  COALESCE(NULLIF(TRIM(c.ref_externa_otro),''), NULLIF(TRIM(re.refs_externas),'')) AS ref_externa,
+
+
+  /* INTERNA/EXTERNA: vista -> deducido por presencia de valores */
+  COALESCE(
+    NULLIF(TRIM(ig.interna_externa),''),
+    CASE
+      WHEN COALESCE(NULLIF(TRIM(c.ref_interna_otro),''), NULLIF(TRIM(c.ref_interna),''), NULLIF(TRIM(ri.refs_internas),'')) IS NOT NULL THEN 'Interna'
+      WHEN COALESCE(NULLIF(TRIM(c.ref_externa_otro),''), NULLIF(TRIM(c.ref_externa),''), NULLIF(TRIM(re.refs_externas),'')) IS NOT NULL THEN 'Externa'
+      ELSE '' END
+  ) AS interna_externa,
+
+  ig.persona_que_agrede,
+  ig.acciones,
+
+  /* Dirección: vista -> casos -> víctimas */
+  COALESCE(
+    NULLIF(TRIM(ig.direccion),''),
+    NULLIF(TRIM(c.direccion),''),
+    NULLIF(TRIM(v.direccion_actual),'')
+  ) AS direccion,
+
+  ig.telefono,
+  ig.area_id,
+  ig.estado
+FROM informe_coordinacion_general ig
+LEFT JOIN casos    c ON c.id = ig.no_orden
+LEFT JOIN victimas v ON v.id = c.victima_id
+LEFT JOIN LATERAL (
+  SELECT
+    string_agg(COALESCE(h.nombre,''), E'\n' ORDER BY h.id) AS hijos_tbl_nombres,
+    string_agg(
+      CASE
+        WHEN lower(COALESCE(h.sexo,'')) IN ('f','femenino') THEN 'Mujer'
+        WHEN lower(COALESCE(h.sexo,'')) IN ('m','masculino') THEN 'Hombre'
+        ELSE COALESCE(h.sexo,'')
+      END,
+      E'\n' ORDER BY h.id
+    ) AS hijos_tbl_sexos,
+    string_agg(COALESCE(h.edad_anios::text,''), E'\n' ORDER BY h.id) AS hijos_tbl_edades
+  FROM public.hijos h
+  WHERE h.caso_id = c.id
+) hj ON true
+${frJoin}
+LEFT JOIN LATERAL (
+  SELECT string_agg(dri.nombre, ', ') AS refs_internas
+  FROM caso_ref_interna  cri
+  JOIN destinos_referencia_interna  dri ON dri.id = cri.destino_id
+  WHERE cri.caso_id = c.id
+) ri ON true
+LEFT JOIN LATERAL (
+  SELECT string_agg(dre.nombre, ', ') AS refs_externas
+  FROM caso_ref_externa cre
+  JOIN destinos_referencia_externa dre ON dre.id = cre.destino_id
+  WHERE cre.caso_id = c.id
+) re ON true
+${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+ORDER BY ig.fecha_atencion DESC, ig.no_orden DESC
+
     `;
-    let { rows } = await pool.query(sql, vals);
+
+    const { rows } = await pool.query(sql, vals);
+
 
     // ── helpers de formato ───────────────────────────────────
     const sexHuman = (s='') => {
@@ -3603,6 +3715,24 @@ app.get('/apiv2/informes/excel/general', authMiddleware, async (req, res) => {
       }
       return lines.join('\n');
     };
+
+    const hijosNombresCell = (val) => {
+  const arr = parseHijos(val);
+  return arr.map(h => (h?.nombre || '').trim()).filter(Boolean).join('\n');
+};
+const hijosSexosCell = (val) => {
+  const arr = parseHijos(val);
+  return arr.map(h => sexHuman(h?.sexo || h?.genero || '')).filter(Boolean).join('\n');
+};
+
+const hijosEdadesCell = (val) => {
+  const arr = parseHijos(val);
+  return arr
+    .map(h => (h?.edad_anios ?? h?.edad ?? '').toString().trim())
+    .filter(Boolean)
+    .join('\n');
+};
+
 
     const _mapAgresorToken = (typeof mapAgresorToken === 'function')
       ? mapAgresorToken
@@ -3749,27 +3879,63 @@ app.get('/apiv2/informes/excel/general', authMiddleware, async (req, res) => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Informe general');
 
-    const headers = [
-      'No. de orden','Nombre de la persona','CUI','Fecha de nacimiento',
-      'Sexo','Edad (años)','Estado civil','Ocupación','Lugar de origen','Escolaridad',
-      'Motivo de la consulta','Tipos de violencia','Fecha atención','Día','Mes','Año',
-      'Hijas/Hijos','Etnia','Nacionalidad','Residencia',
-      'Quién refiere','A dónde se refiere','Interna/Externa',
-      'Persona que agrede','Acciones','Dirección','Teléfono','Área','Estado'
-    ];
-    ws.addRow(headers);
-    ws.getRow(1).font = { bold: true };
-    ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
-    ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE047' } };
-    ws.columns = [
-      { width: 12 }, { width: 32 }, { width: 16 }, { width: 14 },
-      { width: 10 }, { width: 12 }, { width: 18 }, { width: 24 },
-      { width: 24 }, { width: 22 }, { width: 26 }, { width: 28 },
-      { width: 14 }, { width: 6 }, { width: 6 }, { width: 6 },
-      { width: 30 }, { width: 14 }, { width: 16 }, { width: 18 },
-      { width: 24 }, { width: 26 }, { width: 16 },
-      { width: 26 }, { width: 20 }, { width: 26 }, { width: 16 }, { width: 8 }, { width: 12 },
-    ];
+  const H1 = [
+  'No. de orden','Nombre de la persona','CUI','Fecha de nacimiento',
+  'Sexo','Edad (años)','Estado civil','Ocupación','Lugar de origen','Escolaridad',
+  'Motivo de la consulta','Tipos de violencia','Fecha atención','Día','Mes','Año',
+  'Hijas e hijos', /* ← grupo (cols 17-18) */
+  '',              /* placeholder H2 */
+  'Edad (años)',   /* ← edades de hijas/hijos (col 19) */
+  'Etnia','Nacionalidad','Residencia',
+  'Quién refiere',
+  'A dónde se refiere', /* ← grupo (cols 24-25) */
+  '',
+  'Persona que agrede','Acciones','Dirección','Teléfono','Área','Estado'
+];
+
+
+const H2 = [
+  '','','','','','','','','','','','','','','','',
+  'Nombre','Sexo',  /* subcolumnas del grupo Hijas e hijos */
+  '',               /* “Edad (años)” va sola (sin subcolumna) */
+  '','','',
+  '',
+  'Interna','Externa',
+  '','','','','',''
+];
+
+   ws.addRow(H1);
+ws.addRow(H2);
+
+   [1,2].forEach(rn => {
+  const row = ws.getRow(rn);
+  row.font = { bold: true };
+  row.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE047' } };
+});
+
+ws.columns = [
+  { width: 12 }, { width: 32 }, { width: 16 }, { width: 14 },
+  { width: 10 }, { width: 12 }, { width: 18 }, { width: 24 },
+  { width: 24 }, { width: 22 }, { width: 26 }, { width: 28 },
+  { width: 14 }, { width: 6 },  { width: 6 },  { width: 6 },
+  { width: 24 }, { width: 14 }, /* Hijas e hijos · Nombre / Sexo */
+  { width: 10 },                /* Edad (años) hijas/hijos */
+  { width: 14 }, { width: 16 }, { width: 18 },
+  { width: 24 },
+  { width: 26 }, { width: 26 }, /* Interna / Externa */
+  { width: 26 }, { width: 20 }, { width: 26 }, { width: 16 }, { width: 8 }, { width: 12 },
+];
+
+const TOTAL = 31;
+
+for (let c = 1; c <= 16; c++) ws.mergeCells(1, c, 2, c);     // 1..16
+ws.mergeCells(1, 17, 1, 18);                                 // "Hijas e hijos" (grupo)
+ws.mergeCells(1, 19, 2, 19);                                 // "Edad (años)" hijas/hijos
+for (let c = 20; c <= 23; c++) ws.mergeCells(1, c, 2, c);    // 20..23
+ws.mergeCells(1, 24, 1, 25);                                 // "A dónde se refiere"
+for (let c = 26; c <= TOTAL; c++) ws.mergeCells(1, c, 2, c); // 26..31
+
     const fmtDate = (d) => d ? new Date(d).toISOString().slice(0,10) : '';
 
     rows.forEach(r => {
@@ -3786,13 +3952,16 @@ app.get('/apiv2/informes/excel/general', authMiddleware, async (req, res) => {
 
       const idKey      = (r.cui ?? '').toString().trim();
       const ocupacion  = idKey ? (ocupacionById.get(idKey) || '') : '';
+      const hijosNombres = r.hijos_tbl_nombres || hijosNombresCell(r.hijos);
+const hijosSexos   = r.hijos_tbl_sexos   || hijosSexosCell(r.hijos);
+const hijosEdades  = r.hijos_tbl_edades  || hijosEdadesCell(r.hijos);
 
       const rr = ws.addRow([
         r.no_orden ?? '',
         r.nombre_persona ?? '',
         r.cui ?? '',
         fmtDate(r.fecha_nacimiento),
-        sexoNice,
+        sexHuman(r.sexo),
         r.edad ?? '',
         r.estado_civil ?? '',
         ocupacion,
@@ -3804,14 +3973,17 @@ app.get('/apiv2/informes/excel/general', authMiddleware, async (req, res) => {
         r.fecha_atencion_dia ?? '',
         r.fecha_atencion_mes ?? '',
         r.fecha_atencion_anio ?? '',
-        hijosNice,
+          // 17–18: grupo “Hijas e hijos”
+   hijosNombres,            // 17
+  hijosSexos,              // 18
+  hijosEdades,             // 19
         r.etnia ?? '',
         r.nacionalidad ?? '',
         r.residencia ?? '',
         r.quien_refiere ?? '',
-        r.a_donde_se_refiere ?? '',
-        r.interna_externa ?? '',
-        agresorNic,
+        r.ref_interna ?? '',   // ← NUEVO: Interna (col 22)
+        r.ref_externa ?? '',   // ← NUEVO: Externa (col 23)
+        agresorNic,  
         r.acciones ?? '',
         r.direccion ?? '',
         r.telefono ?? '',
@@ -3819,8 +3991,11 @@ app.get('/apiv2/informes/excel/general', authMiddleware, async (req, res) => {
         r.estado ?? ''
       ]);
 
-      rr.getCell(17).alignment = { wrapText: true, vertical: 'top' }; // Hijas/Hijos
-      rr.getCell(24).alignment = { wrapText: true, vertical: 'top' }; // Persona que agrede
+      // Wrap en columnas de texto largas
+rr.getCell(17).alignment = { wrapText: true, vertical: 'top' }; // Nombres hijas/hijos
+rr.getCell(18).alignment = { wrapText: true, vertical: 'top' }; // Sexos
+rr.getCell(19).alignment = { wrapText: true, vertical: 'top' }; // Edades
+rr.getCell(26).alignment = { wrapText: true, vertical: 'top' }; // Persona que agrede
     });
 
     res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -3845,6 +4020,26 @@ const yearFromYMD_SAFE = (dateLike) => {
   const [y] = String(dateLike || '').slice(0, 10).split('-');
   return Number(y) || new Date().getFullYear();
 };
+
+// Convierte start/end en un rótulo humano: "Enero 2025", "Enero - Marzo 2025" o "Enero - Diciembre 2025"
+const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function rangeLabelFrom(startStr, endStr) {
+  const s = new Date(startStr), e = new Date(endStr);
+  const sameY = s.getFullYear() === e.getFullYear();
+  const sFirst = s.getDate()===1;
+  const eLast  = new Date(e.getFullYear(), e.getMonth()+1, 0).getDate()===e.getDate();
+
+  if (sameY) {
+    if (s.getMonth()===e.getMonth() && sFirst && eLast) {
+      return `${MONTHS_ES[s.getMonth()]} ${s.getFullYear()}`;                 // mes cerrado
+    }
+    if (s.getMonth()===0 && e.getMonth()===11 && sFirst && eLast) {
+      return `Enero - Diciembre ${s.getFullYear()}`;                          // año completo
+    }
+    return `${MONTHS_ES[s.getMonth()]} - ${MONTHS_ES[e.getMonth()]} ${s.getFullYear()}`; // rango dentro del año
+  }
+  return `${MONTHS_ES[s.getMonth()]} ${s.getFullYear()} - ${MONTHS_ES[e.getMonth()]} ${e.getFullYear()}`;
+}
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -4013,9 +4208,12 @@ app.get('/apiv2/informes/excel/anual', authMiddleware, async (req, res) => {
     const tot = rep.totales;
     const wsT = wb.addWorksheet('Totales (año)');
     wsT.columns = [{ width:44 },{ width:14 }];
-    wsT.addRow([`Mujeres atendidas — Totales ${y}`]).font = { bold:true, size:14 };
 
-    const mhT = 'Totales';
+    const rangeLabelYear = `Enero - Diciembre ${y}`;
+
+    wsT.addRow([`Mujeres atendidas — ${rangeLabelYear}`]).font = { bold:true, size:14 };
+
+    const mhT = rangeLabelYear;
     putTable2(wsT, '1) Mujeres Atendidas', mhT, [['Total', tot['1_mujeres_atendidas']?.total ?? 0]]);
     putTable2(wsT, '2) Sexo', mhT, normalizeByOrder(tot['2_sexo'], ORD_SEXO));
     putTable2(wsT, '3) Edad de Mujeres Atendidas', mhT, normalizeByOrder(tot['3_edad_rangos'], ORD_EDAD));

@@ -43,7 +43,7 @@ function Victimas() {
       const { data } = await api.get("/victimas");
       setLista(Array.isArray(data) ? data : []);
     } catch {
-      setMsg("No se pudieron cargar las víctimas.");
+      setMsg("No se pudieron cargar las sobrevivientes.");
     } finally {
       setLoading(false);
     }
@@ -108,7 +108,7 @@ function Victimas() {
 
       const id = data?.id;
       setVictimaId(id || null);
-      setMsgForm(id ? `Víctima creada con ID #${id}.` : "Víctima creada.");
+      setMsgForm(id ? `Sobreviviente creada con ID #${id}.` : "Sobreviviente creada.");
 
       // refresca listado
       fetchVictimas();
@@ -117,7 +117,7 @@ function Victimas() {
       if (detail.toLowerCase().includes("dpi")) {
         setMsgForm("El DPI ya existe o no es válido.");
       } else {
-        setMsgForm(e?.response?.data?.error || "No se pudo registrar la víctima.");
+        setMsgForm(e?.response?.data?.error || "No se pudo registrar la sobreviviente.");
       }
     } finally {
       setCreando(false);
@@ -151,7 +151,7 @@ function Victimas() {
   return (
     <div className="social-main">
       <header className="social-topbar">
-        <h1>Víctimas</h1>
+        <h1>Sobrevivientes</h1>
         <div className="topbar-actions">
           <Link to={BASE} className="btn-secondary">← Volver al panel</Link>
         </div>
@@ -160,17 +160,17 @@ function Victimas() {
       <div className="social-content">
         {msg && <div className="alert-info">{msg}</div>}
 
-        {/* Registrar víctima */}
+        {/* Registrar sobreviviente */}
         <section className="card">
           <div className="card-header">
-            <h3>Registrar víctima</h3>
+            <h3>Registrar sobreviviente</h3>
             <div className="card-actions">
               {victimaId && (
                 <button
                   className="btn-primary"
                   onClick={() => nav(`${BASE}/casos/nuevo?victima_id=${victimaId}`)}
                 >
-                  Crear caso con ID #{victimaId}
+                  Crear proceso con ID #{victimaId}
                 </button>
               )}
             </div>
@@ -306,7 +306,7 @@ function Victimas() {
 
             <div className="card-actions" style={{ marginTop: 8 }}>
               <button className="btn-primary" disabled={creando}>
-                {creando ? "Guardando…" : "Registrar víctima"}
+                {creando ? "Guardando…" : "Registrar sobreviviente"}
               </button>
               {victimaId && (
                 <button
@@ -374,7 +374,7 @@ function Victimas() {
                             nav(`${BASE}/casos/nuevo?victima_id=${v.id}`)
                           }
                         >
-                          Nuevo caso
+                          Nuevo proceso
                         </button>
                       </td>
                     </tr>

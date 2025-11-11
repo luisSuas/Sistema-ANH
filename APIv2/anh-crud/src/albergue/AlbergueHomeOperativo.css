@@ -1,5 +1,5 @@
 /* ====== Base & variables (idéntico a Social) ====== */
-:root{
+:root[data-theme="dark"]{
   --bg:#0b0f14;
   --panel:#111823;
   --panel-2:#0e1520;
@@ -33,7 +33,7 @@ html, body, #root{ height:100%; margin:0; background:var(--bg); color:var(--text
 
 /* ========= Sidebar ========= */
 .albergue-sidebar{
-  background:linear-gradient(180deg, #0f172a, #0b1320);
+  background:var(--sidebar-gradient);
   color:#fff;
   padding:16px;
   display:flex;
@@ -130,7 +130,7 @@ html, body, #root{ height:100%; margin:0; background:var(--bg); color:var(--text
 .table-wrap{ overflow-x:auto; }
 .table{ min-width:760px; width:100%; border-collapse:collapse; }
 .table th, .table td{ text-align:left; padding:10px 12px; border:1px solid var(--border); }
-.table thead th{ background:#0d1420; color:#cdd7e6; font-weight:700; }
+.table thead th{ background:var(--table-head-bg); color:var(--table-head-text); font-weight:700; }
 .td-center{ text-align:center; padding:12px; border:1px solid var(--border); }
 .pad{ padding:8px; }
 

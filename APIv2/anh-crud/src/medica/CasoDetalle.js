@@ -186,7 +186,7 @@ export default function CasoDetalle() {
           }
         } catch {}
 
-        // Víctima
+        // Sobreviviente
         if (c?.victima_id) {
           const { data: v } = await getVictimaById(c.victima_id);
           setVictima(v);
@@ -195,7 +195,7 @@ export default function CasoDetalle() {
         }
       } catch (e) {
         console.error(e);
-        setMsg(e?.response?.data?.error || "No se pudo cargar el detalle del caso.");
+        setMsg(e?.response?.data?.error || "No se pudo cargar el detalle del proceso.");
       } finally {
         setLoading(false);
       }
@@ -410,7 +410,7 @@ export default function CasoDetalle() {
       const { data: c2 } = await getCasoById(id);
       setCaso(c2);
       setEdit(false);
-      setMsg("Caso enviado a revisión.");
+      setMsg("Proceso enviado a revisión.");
     } catch (e) {
       console.error(e);
       setMsg(e?.response?.data?.error || "No se pudo enviar a revisión.");
@@ -420,7 +420,7 @@ export default function CasoDetalle() {
   }
 
   async function eliminar() {
-    if (!window.confirm("¿Eliminar este caso? Esta acción no se puede deshacer.")) {
+    if (!window.confirm("¿Eliminar este proceso? Esta acción no se puede deshacer.")) {
       return;
     }
     try {
@@ -447,7 +447,7 @@ export default function CasoDetalle() {
       <div className="cd-header">
         <div className="cd-header-l">
           <Link to={BASE} className="cd-back">← Volver</Link>
-          <h2>Detalle del Caso #{id}</h2>
+          <h2>Detalle del proceso #{id}</h2>
           {caso && (
             <div className="cd-header-meta">
               <EstadoBadge estado={caso.estado} />
@@ -463,9 +463,9 @@ export default function CasoDetalle() {
 
       {!loading && caso && (
         <div className="cd-card">
-          {/* VÍCTIMA */}
+          {/* SOBREviviente */}
           <section className="cd-section">
-            <h3>Víctima</h3>
+            <h3>Sobreviviente</h3>
             <div className="cd-grid">
               <Item label="Nombre">{nombreVictima || "-"}</Item>
               <Item label="DPI">{victima?.dpi || victima?.cui || "-"}</Item>
@@ -517,7 +517,7 @@ export default function CasoDetalle() {
                 {prettyLugarOrigen(victima, cat) || "-"}
               </Item>
             </div>
-            {!victima && <div className="cd-muted">No se pudieron cargar los datos de la víctima.</div>}
+            {!victima && <div className="cd-muted">No se pudieron cargar los datos de la sobreviviente.</div>}
           </section>
 
           {/* MULTIVALOR: Tipos de violencia */}
@@ -762,7 +762,7 @@ export default function CasoDetalle() {
               (caso?.agresores?.length ? caso.agresores : form.agresores).map((a, i) => (
                 <div key={i} className="cd-grid">
                   <Item label={`Agresor #${i + 1}`}>{(a?.nombre && String(a.nombre).trim()) || "Sin nombre"}</Item>
-                  <Item label="Relación con la víctima">
+                  <Item label="Relación con la sobreviviente">
                     {nombreDe(cat.relacionesAgresor, a?.relacion_agresor_id) || "-"}
                   </Item>
                   <Item label="Edad">{a?.edad != null && a.edad !== "" ? `${Number(a.edad)} años` : "-"}</Item>
@@ -784,7 +784,7 @@ export default function CasoDetalle() {
 
           {/* CASO */}
           <section className="cd-section">
-            <h3>Datos del caso</h3>
+            <h3>Datos del proceso</h3>
 
             {!edit ? (
               <div className="cd-grid">
@@ -984,7 +984,7 @@ export default function CasoDetalle() {
           className="btn-danger"
           onClick={eliminar}
           disabled={busy === "eliminar" || isCompletado}
-          title={isCompletado ? "No se puede eliminar un caso completado" : ""}
+        title={isCompletado ? "No se puede eliminar un proceso completado" : ""}
         >
           {busy === "eliminar" ? "Eliminando…" : "Eliminar"}
         </button>

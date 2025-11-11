@@ -109,9 +109,9 @@ function VictimasLista() {
           try { await cargarNotasDevolucion(mapBorradores); } catch {}
         } catch {}
       } catch (err) {
-        const msg = err?.response?.data?.error || "No se pudieron cargar las víctimas";
+        const msg = err?.response?.data?.error || "No se pudieron cargar las sobrevivientes";
         setError(msg);
-        console.error("Error al obtener las víctimas:", err);
+        console.error("Error al obtener las sobrevivientes:", err);
       } finally {
         if (alive) setLoading(false);
       }
@@ -164,7 +164,7 @@ function VictimasLista() {
           setBorradores(mapBorradores);
         } catch {}
       } catch (err) {
-        const msg = err?.response?.data?.error || "No se pudieron cargar las víctimas";
+        const msg = err?.response?.data?.error || "No se pudieron cargar las sobrevivientes";
         setError(msg);
       } finally {
         if (alive) setLoading(false);
@@ -252,13 +252,13 @@ function VictimasLista() {
         <button className="btn btn-volver" onClick={goBackHome} title="Volver al panel operativo">
           ← Volver
         </button>
-        <h2 className="vl-title" style={{ margin: 0 }}>Listado de Víctimas</h2>
+        <h2 className="vl-title" style={{ margin: 0 }}>Listado de Sobrevivientes</h2>
       </div>
 
       {!mostrar && (
         <div className="boton-container" style={{ marginTop: 6 }}>
           <button className="boton-estadisticas" onClick={handleClick}>
-            Ver listado de víctimas
+            Ver listado de sobrevivientes
           </button>
         </div>
       )}
@@ -274,7 +274,7 @@ function VictimasLista() {
         </div>
       )}
 
-      {loading && <p>Cargando víctimas...</p>}
+      {loading && <p>Cargando sobrevivientes...</p>}
       {error && <p className="error">{error}</p>}
 
       {mostrar && !loading && (
@@ -323,7 +323,7 @@ function VictimasLista() {
                             disabled={busyId === v.id}
                             title={`Abrir caso #${activo.id}`}
                           >
-                            {busyId === v.id ? 'Abriendo.' : 'Ver caso'}
+                            {busyId === v.id ? 'Abriendo.' : 'Ver proceso'}
                           </button>
                         </>
                       )}
@@ -338,15 +338,15 @@ function VictimasLista() {
                           borrId
                             ? `Abrir borrador #${borrId}`
                             : areaSlug
-                            ? `Crear caso (área ${areaSlug})`
-                            : "Crear caso"
+                            ? `Crear proceso (área ${areaSlug})`
+                            : "Crear proceso"
                         }
                       >
                         {busyId === v.id
                           ? "Abriendo…"
                           : borrId
                           ? "Ver borrador"
-                          : "Crear nuevo caso"}
+                          : "Crear nuevo proceso"}
                       </button>
 
                       {borrId && (notasDev[v.id] || '').trim() && (

@@ -389,7 +389,7 @@ export default function CasoNuevo() {
          <Link to="/psicologica" className="cn-back">
             ← Volver
           </Link>
-          <h2>Nuevo caso</h2>
+          <h2>Nuevo proceso</h2>
           <p className="cn-muted">
             Área (desde token):{" "}
             <strong>{String(areaIdFromToken || "-")}</strong>
@@ -405,7 +405,7 @@ export default function CasoNuevo() {
           <Row>
             <Col>
               <Label>
-                Víctima (ID) <Req />
+                Sobreviviente (ID) <Req />
               </Label>
               <input
                 name="victima_id"
@@ -415,7 +415,7 @@ export default function CasoNuevo() {
                 required
               />
               <small className="cn-help">
-                ¿No la sabes? Ve a <Link to="/psicologica/victimas">Víctimas</Link>{" "}
+                ¿No la sabes? Ve a <Link to="/psicologica/victimas">Sobrevivientes</Link>{" "}
                 y copia el ID.
               </small>
             </Col>
@@ -431,8 +431,8 @@ export default function CasoNuevo() {
           </Row>
         </Fieldset>
 
-        {/* SECCIÓN 2: Datos del caso */}
-        <Fieldset title="Datos del caso">
+        {/* SECCIÓN 2: Datos del proceso */}
+        <Fieldset title="Datos del proceso">
           <Row>
             <Col>
               <Label>Motivo de la consulta</Label>
@@ -954,11 +954,11 @@ export default function CasoNuevo() {
             onClick={irDetalle}
             title={
               casoId
-                ? `Ir al detalle del caso #${casoId}`
+                ? `Ir al detalle del proceso #${casoId}`
                 : "Primero guarda el borrador"
             }
           >
-            Ir al detalle del caso
+            Ir al detalle del proceso
           </button>
         </div>
       </form>

@@ -1,0 +1,195 @@
+/* src/theme/tokens.css */
+:root {
+  /* Le dice al navegador que soportas ambos (mejor look en inputs nativos) */
+  color-scheme: light dark;
+
+  /* LIGHT */
+  --bg: #f7f8fb;
+  --panel: #ffffff;
+  --panel-2: #f1f4fb;
+  --text: #0b0f14;
+  --muted: #4f5d73;
+  --border: #d8dee9;
+  --shadow: 0 10px 28px rgba(15,23,42,0.08);
+
+  --primary: #2563eb;
+  --primary-600: #1d4ed8;
+  --green: #16a34a;
+  --green-600: #15803d;
+  --yellow: #d97706;
+  --red: #dc2626;
+  --red-600: #b91c1c;
+  --cyan: #0ea5e9;
+
+  --brand: #2563eb;
+  --brand-strong: #1e40af;
+  --brand1: #2563eb;
+  --brand2: #1e3a8a;
+
+  --ok: #15803d;
+  --danger: #dc2626;
+  --line: #d8dee9;
+
+  --card: #ffffff;
+  --chip: #e3e9f6;
+  --chip-active: #d5def5;
+  --error-bg: #fee2e2;
+  --error-bd: #fecaca;
+
+  --radius: 14px;
+
+  --table-head-bg: #e7ecf8;
+  --table-head-text: #1f2937;
+  --badge-bg: #edf2fb;
+  --sidebar-gradient: linear-gradient(180deg, #f1f4fb, #e5ecfb);
+  --sidebar-link-color: #4a5a78;
+  --sidebar-link-hover: var(--text);
+  --sidebar-muted: #6a7a95;
+  --sidebar-hover-bg: rgba(37,99,235,0.12);
+  --sidebar-active-bg: rgba(37,99,235,0.18);
+  --sidebar-active-shadow: 0 0 0 2px rgba(37,99,235,0.18) inset;
+
+  --toggle-track-light: #e5e7eb;
+  --toggle-track-dark: #374151;
+}
+
+/* DARK (tu diseño actual) */
+:root[data-theme="dark"] {
+  --bg:#0b0f14;
+  --panel:#111823;
+  --panel-2:#0e1520;
+  --text:#e6eef8;
+  --muted:#9bb0c9;
+  --border:#1e293b;
+  --shadow:0 8px 24px rgba(0,0,0,.35);
+
+  --primary:#3b82f6;
+  --primary-600:#2563eb;
+  --green:#22c55e;
+  --green-600:#16a34a;
+  --yellow:#f59e0b;
+  --red:#ef4444;
+  --red-600:#dc2626;
+  --cyan:#06b6d4;
+
+  --brand:#60a5fa;
+  --brand-strong:#3b82f6;
+  --brand1:#5b8cff;
+  --brand2:#3b5bdb;
+
+  --ok:#22c55e;
+  --danger:#ef4444;
+  --line:#1f2a44;
+
+  --card:#0b1220;
+  --chip:#1b2431;
+  --chip-active:#21324b;
+  --error-bg:#fee2e2;
+  --error-bd:#fecaca;
+
+  --radius: 14px;
+
+  --table-head-bg:#0d1420;
+  --table-head-text:#cdd7e6;
+  --badge-bg:#0e1520;
+  --sidebar-gradient: linear-gradient(180deg, #0f172a, #0b1320);
+  --sidebar-link-color:#e2e8f0;
+  --sidebar-link-hover:#ffffff;
+  --sidebar-muted:#cbd5e1;
+  --sidebar-hover-bg:rgba(255,255,255,.06);
+  --sidebar-active-bg:rgba(59,130,246,.25);
+  --sidebar-active-shadow:0 0 0 2px rgba(59,130,246,.15) inset;
+
+  --toggle-track-light: #e5e7eb;
+  --toggle-track-dark: #374151;
+}
+
+/* Base global mínima para que todo el sistema “respire” el tema */
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+a { color: var(--primary); }
+.border { border: 1px solid var(--border); }
+.panel  { background: var(--panel); box-shadow: var(--shadow); }
+.muted  { color: var(--muted); }
+
+/* Safe-lane para que el FAB nunca tape el topbar */
+.with-fab-top .medica-topbar,
+.with-fab-top .legal-topbar,
+.with-fab-top .social-topbar,
+.with-fab-top .general-topbar,
+.with-fab-top .psicologica-topbar,
+.with-fab-top .albergue-topbar,
+.with-fab-top .admin-topbar {
+  padding-right: 120px; /* ancho del switch + chip + margen */
+}
+
+/* Ajustes espec�ficos para la barra lateral en modo claro */
+:root[data-theme="light"] .social-sidebar,
+:root[data-theme="light"] .albergue-sidebar,
+:root[data-theme="light"] .general-sidebar,
+:root[data-theme="light"] .legal-sidebar,
+:root[data-theme="light"] .medica-sidebar,
+:root[data-theme="light"] .psicologica-sidebar {
+  color: var(--text);
+}
+
+:root[data-theme="light"] .social-sidebar .nav-item,
+:root[data-theme="light"] .albergue-sidebar .nav-item,
+:root[data-theme="light"] .general-sidebar .nav-item,
+:root[data-theme="light"] .legal-sidebar .nav-item,
+:root[data-theme="light"] .medica-sidebar .nav-item,
+:root[data-theme="light"] .psicologica-sidebar .nav-item {
+  color: var(--sidebar-link-color);
+  border-color: transparent;
+}
+
+:root[data-theme="light"] .social-sidebar .nav-item:hover,
+:root[data-theme="light"] .albergue-sidebar .nav-item:hover,
+:root[data-theme="light"] .general-sidebar .nav-item:hover,
+:root[data-theme="light"] .legal-sidebar .nav-item:hover,
+:root[data-theme="light"] .medica-sidebar .nav-item:hover,
+:root[data-theme="light"] .psicologica-sidebar .nav-item:hover {
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-link-hover);
+}
+
+:root[data-theme="light"] .social-sidebar .nav-item.active,
+:root[data-theme="light"] .albergue-sidebar .nav-item.active,
+:root[data-theme="light"] .general-sidebar .nav-item.active,
+:root[data-theme="light"] .legal-sidebar .nav-item.active,
+:root[data-theme="light"] .medica-sidebar .nav-item.active,
+:root[data-theme="light"] .psicologica-sidebar .nav-item.active {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-link-hover);
+  box-shadow: var(--sidebar-active-shadow);
+}
+
+:root[data-theme="light"] .social-sidebar .link-ghost,
+:root[data-theme="light"] .albergue-sidebar .link-ghost,
+:root[data-theme="light"] .general-sidebar .link-ghost,
+:root[data-theme="light"] .legal-sidebar .link-ghost,
+:root[data-theme="light"] .medica-sidebar .link-ghost,
+:root[data-theme="light"] .psicologica-sidebar .link-ghost {
+  color: var(--sidebar-muted);
+}
+
+:root[data-theme="light"] .social-sidebar .link-ghost:hover,
+:root[data-theme="light"] .albergue-sidebar .link-ghost:hover,
+:root[data-theme="light"] .general-sidebar .link-ghost:hover,
+:root[data-theme="light"] .legal-sidebar .link-ghost:hover,
+:root[data-theme="light"] .medica-sidebar .link-ghost:hover,
+:root[data-theme="light"] .psicologica-sidebar .link-ghost:hover {
+  color: var(--sidebar-link-hover);
+}
+
+:root[data-theme="light"] .social-userbox,
+:root[data-theme="light"] .albergue-userbox,
+:root[data-theme="light"] .general-userbox,
+:root[data-theme="light"] .legal-userbox,
+:root[data-theme="light"] .medica-userbox,
+:root[data-theme="light"] .psicologica-userbox {
+  border-top: 1px solid var(--border);
+}
