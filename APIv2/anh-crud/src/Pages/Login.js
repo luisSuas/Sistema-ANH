@@ -5,6 +5,60 @@ import { useAuth } from "../auth/AuthContext";
 import { login as doLogin } from "../servicios/Servicios";
 import "./Login.css";
 
+const MFA_STYLES = {
+  backdrop: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,.55)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 50,
+  },
+  modal: {
+    width: 360,
+    background: "#0f172a",
+    color: "#e5e7eb",
+    borderRadius: 16,
+    padding: 22,
+    boxShadow: "0 10px 35px rgba(0,0,0,.5)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+  },
+  input: {
+    background: "#0b1220",
+    border: "1px solid #1f2a44",
+    color: "#e5e7eb",
+    padding: "10px 12px",
+    borderRadius: 10,
+    outline: "none",
+    textAlign: "center",
+    fontSize: 18,
+    letterSpacing: 2,
+  },
+  actions: {
+    display: "flex",
+    gap: 8,
+    justifyContent: "flex-end",
+    marginTop: 8,
+  },
+  button: {
+    border: "none",
+    padding: "10px 12px",
+    borderRadius: 10,
+    cursor: "pointer",
+  },
+  confirm: {
+    background: "linear-gradient(180deg, #4776e6, #3b5bdb)",
+    color: "#fff",
+  },
+  cancel: {
+    background: "#1f2937",
+    color: "#e5e7eb",
+  },
+};
+
 function getStoredToken() {
   const keys = ["access_token", "token", "authToken", "jwt", "bearer"];
   for (const k of keys) {
@@ -268,8 +322,13 @@ const Login = ({ onSuccess }) => {
 
       {/* 🔐 Modal de MFA */}
       {showMfa && (
-        <div className="mfa-backdrop">
-          <div className="mfa-modal" role="dialog" aria-modal="true">
+        <div className="mfa-backdrop" style={MFA_STYLES.backdrop}>
+          <div
+            className="mfa-modal"
+            role="dialog"
+            aria-modal="true"
+            style={MFA_STYLES.modal}
+          >
             <h3>Verificación MFA</h3>
             <p>Abre tu app Authenticator y escribe el código de 6 dígitos.</p>
             <input
@@ -280,9 +339,10 @@ const Login = ({ onSuccess }) => {
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
               placeholder="000000"
               autoFocus
+              style={MFA_STYLES.input}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  e.preventDefault(); // ✅ no envía el form padre
+                  e.preventDefault(); // ? no envía el form padre
                   if (!isSubmitting) handleConfirmOtp();
                 }
               }}
@@ -292,10 +352,11 @@ const Login = ({ onSuccess }) => {
                 {mfaError}
               </div>
             )}
-            <div className="mfa-actions">
+            <div className="mfa-actions" style={MFA_STYLES.actions}>
               <button
                 type="button"
                 className="mfa-cancel"
+                style={{ ...MFA_STYLES.button, ...MFA_STYLES.cancel }}
                 onClick={() => {
                   setShowMfa(false);
                   setOtp("");
@@ -304,13 +365,16 @@ const Login = ({ onSuccess }) => {
               >
                 Cancelar
               </button>
-              <button type="button" onClick={handleConfirmOtp} disabled={isSubmitting}>
-                {isSubmitting ? "Verificando…" : "Confirmar"}
+              <button
+                type="button"
+                style={{ ...MFA_STYLES.button, ...MFA_STYLES.confirm }}
+                onClick={handleConfirmOtp}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Verificando." : "Confirmar"}
               </button>
             </div>
           </div>
-
-          
         </div>
       )}
     </div>
