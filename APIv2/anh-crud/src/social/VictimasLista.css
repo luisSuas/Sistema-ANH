@@ -48,7 +48,7 @@
   outline: none;
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
-.input-buscar::placeholder{ color:#8aa0bb; }
+.input-buscar::placeholder{ color: var(--input-placeholder); }
 .input-buscar:focus{
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(59,130,246,.25);
@@ -268,3 +268,4 @@ h2{
 .badge.validado{ color:#60a5fa; }
 .badge.enviado{ color:#a78bfa; }
 .badge.borrador{ color:#9bb0c9; }
+

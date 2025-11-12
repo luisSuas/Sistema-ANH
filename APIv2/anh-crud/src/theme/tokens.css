@@ -45,12 +45,18 @@
   --sidebar-link-color: #4a5a78;
   --sidebar-link-hover: var(--text);
   --sidebar-muted: #6a7a95;
+  --sidebar-divider: rgba(15,23,42,0.08);
   --sidebar-hover-bg: rgba(37,99,235,0.12);
   --sidebar-active-bg: rgba(37,99,235,0.18);
   --sidebar-active-shadow: 0 0 0 2px rgba(37,99,235,0.18) inset;
 
+  --input-placeholder: #7c8699;
+
   --toggle-track-light: #e5e7eb;
   --toggle-track-dark: #374151;
+
+  --chip-strong-border: #bcc8ee;
+  --chip-strong-hover: #cfd7fb;
 }
 
 /* DARK (tu diseño actual) */
@@ -96,12 +102,18 @@
   --sidebar-link-color:#e2e8f0;
   --sidebar-link-hover:#ffffff;
   --sidebar-muted:#cbd5e1;
+  --sidebar-divider:rgba(255,255,255,.08);
   --sidebar-hover-bg:rgba(255,255,255,.06);
   --sidebar-active-bg:rgba(59,130,246,.25);
   --sidebar-active-shadow:0 0 0 2px rgba(59,130,246,.15) inset;
 
+  --input-placeholder:#8aa0bb;
+
   --toggle-track-light: #e5e7eb;
   --toggle-track-dark: #374151;
+
+  --chip-strong-border:#2a4570;
+  --chip-strong-hover:#25466f;
 }
 
 /* Base global mínima para que todo el sistema “respire” el tema */
@@ -193,3 +205,5 @@ a { color: var(--primary); }
 :root[data-theme="light"] .psicologica-userbox {
   border-top: 1px solid var(--border);
 }
+
+

@@ -46,22 +46,22 @@ html, body, #root{ height:100%; margin:0; background:var(--bg); color:var(--text
 .nav-item{
   display:block; width:100%; text-align:left;
   padding:10px 12px; border-radius:10px;
-  color:#e2e8f0; background:transparent; border:0;
+  color: var(--sidebar-link-color); background:transparent; border:0;
   text-decoration:none; cursor:pointer;
   transition: background .15s ease, box-shadow .15s ease, color .15s ease;
 }
-.nav-item:hover{ background:rgba(255,255,255,.06); color:#fff; }
+.nav-item:hover{ background: var(--sidebar-hover-bg); color: var(--sidebar-link-hover); }
 .nav-item.active{
   background:rgba(59,130,246,.25); color:#fff;
   box-shadow:0 0 0 2px rgba(59,130,246,.15) inset;
 }
 .nav-item:focus-visible{ outline:2px solid rgba(59,130,246,.6); outline-offset:2px; }
 
-.medica-userbox{ margin-top:auto; border-top:1px solid rgba(255,255,255,.08); padding-top:12px; }
+.medica-userbox{ margin-top:auto; border-top:1px solid var(--sidebar-divider); padding-top:12px; }
 .medica-userline{ font-size:12px; margin-bottom:2px; }
 .medica-userline.small{ opacity:.85; }
-.link-ghost{ margin-top:6px; background:transparent; color:#cbd5e1; border:0; text-decoration:underline; cursor:pointer; }
-.link-ghost:hover{ color:#fff; }
+.link-ghost{ margin-top:6px; background:transparent; color: var(--sidebar-muted); border:0; text-decoration:underline; cursor:pointer; }
+.link-ghost:hover{ color: var(--sidebar-link-hover); }
 
 /* ========= Main ========= */
 .medica-main{ display:flex; flex-direction:column; min-width:0; }
@@ -90,7 +90,7 @@ html, body, #root{ height:100%; margin:0; background:var(--bg); color:var(--text
   background:var(--panel-2); color:var(--text);
   border:1px solid var(--border); border-radius:10px; padding:10px 12px; outline:none; width:100%;
 }
-.input::placeholder, .form-row input::placeholder{ color:#8aa0bb; }
+.input::placeholder, .form-row input::placeholder{ color: var(--input-placeholder); }
 .input:focus, .form-row input:focus, .card select:focus, .card textarea:focus{
   border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.25);
 }
@@ -200,3 +200,4 @@ html, body, #root{ height:100%; margin:0; background:var(--bg); color:var(--text
 @media (max-width: 480px){
   .kpi-grid{ grid-template-columns:1fr; }
 }
+

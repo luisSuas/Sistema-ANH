@@ -40,20 +40,20 @@
 .general-nav{ display:flex; flex-direction:column; gap:6px; margin-top:12px; }
 .nav-item{
   display:block; width:100%; text-align:left; padding:10px 12px; border-radius:10px;
-  color:#e2e8f0; background:transparent; border:0; text-decoration:none; cursor:pointer;
+  color: var(--sidebar-link-color); background:transparent; border:0; text-decoration:none; cursor:pointer;
   transition: background .15s ease, box-shadow .15s ease, color .15s ease;
 }
-.nav-item:hover{ background:rgba(255,255,255,.06); color:#fff; }
+.nav-item:hover{ background: var(--sidebar-hover-bg); color: var(--sidebar-link-hover); }
 .nav-item.active{
-  background:rgba(59,130,246,.25); color:#fff; box-shadow:0 0 0 2px rgba(59,130,246,.15) inset;
+  background: var(--sidebar-active-bg); color: var(--sidebar-link-hover); box-shadow: var(--sidebar-active-shadow);
 }
 .nav-item:focus-visible{ outline:2px solid rgba(59,130,246,.6); outline-offset:2px; }
 
-.general-userbox{ margin-top:auto; border-top:1px solid rgba(255,255,255,.08); padding-top:12px; }
+.general-userbox{ margin-top:auto; border-top:1px solid var(--sidebar-divider); padding-top:12px; }
 .general-userline{ font-size:12px; margin-bottom:2px; }
 .general-userline.small{ opacity:.85; }
-.link-ghost{ margin-top:6px; background:transparent; color:#cbd5e1; border:0; text-decoration:underline; cursor:pointer; }
-.link-ghost:hover{ color:#fff; }
+.link-ghost{ margin-top:6px; background:transparent; color: var(--sidebar-muted); border:0; text-decoration:underline; cursor:pointer; }
+.link-ghost:hover{ color: var(--sidebar-link-hover); }
 
 /* ===== Main ===== */
 .general-main{ display:flex; flex-direction:column; }
@@ -74,7 +74,7 @@
   background:var(--panel-2); color:var(--text);
   border:1px solid var(--border); border-radius:10px; padding:10px 12px; outline:none;
 }
-.input::placeholder{ color:#8aa0bb; }
+.input::placeholder{ color: var(--input-placeholder); }
 .input:focus, .card select:focus{
   border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.25);
 }
@@ -161,7 +161,7 @@
 /* ===== Chips / Rangos rápidos ===== */
 .quick-range{ display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; align-items:center; }
 .chip{
-  background:#1b2431;
+  background:var(--chip);
   border:1px solid var(--border);
   color:var(--text);
   padding:8px 12px;
@@ -171,8 +171,8 @@
   transition: transform .08s ease, background .15s ease, border-color .15s ease;
 }
 .chip:hover{ transform:translateY(-1px); border-color:var(--primary-600); }
-.chip-download{ background:#21324b; border-color:#2a4570; }
-.chip-download:hover{ background:#25466f; }
+.chip-download{ background:var(--chip-active); border-color:var(--chip-strong-border); }
+.chip-download:hover{ background:var(--chip-strong-hover); }
 
 /* ===== Grid filtros ===== */
 .filter-grid{
@@ -219,3 +219,4 @@
 
 /* Accesibilidad */
 :focus-visible{ outline:2px solid rgba(59,130,246,.6); outline-offset:2px; }
+
