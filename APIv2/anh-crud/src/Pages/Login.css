@@ -197,6 +197,65 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe U
   box-shadow: none;
 }
 
+/* MFA modal overlay (separate to avoid inline styles and CSP issues) */
+.mfa-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.mfa-modal {
+  width: 360px;
+  background: #0f172a;
+  color: #e5e7eb;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mfa-modal input {
+  background: #0b1220;
+  border: 1px solid #1f2a44;
+  color: #e5e7eb;
+  padding: 10px 12px;
+  border-radius: 10px;
+  outline: none;
+  text-align: center;
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+
+.mfa-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.mfa-actions button {
+  border: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.mfa-actions button:not(.mfa-cancel) {
+  background: linear-gradient(180deg, #4776e6, #3b5bdb);
+  color: #fff;
+}
+
+.mfa-cancel {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
 /* Footer / links auxiliares (opcional) */
 .login-help {
   margin-top: 6px;
