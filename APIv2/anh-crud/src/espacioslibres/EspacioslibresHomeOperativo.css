@@ -1,0 +1,202 @@
+/* ====== Base & variables ====== */
+:root[data-theme="dark"]{
+  --bg:#0b0f14;
+  --panel:#111823;
+  --panel-2:#0e1520;
+  --text:#e6eef8;
+  --muted:#9bb0c9;
+  --primary:#3b82f6;
+  --primary-600:#2563eb;
+  --green:#22c55e;
+  --green-600:#16a34a;
+  --yellow:#f59e0b;
+  --red:#ef4444;
+  --red-600:#dc2626;
+  --cyan:#06b6d4;
+  --border:#1e293b;
+  --shadow:0 8px 24px rgba(0,0,0,.35);
+  --radius:14px;
+}
+
+*{ box-sizing:border-box; }
+html, body, #root{ height:100%; margin:0; background:var(--bg); color:var(--text); }
+:focus-visible{ outline:2px solid rgba(59,130,246,.6); outline-offset:2px; }
+
+/* ========= Layout ========= */
+.medica-shell{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:260px minmax(0, 1fr);
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* ========= Sidebar ========= */
+.medica-sidebar{
+  background:var(--sidebar-gradient);
+  color:#fff;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  border-right:1px solid var(--border);
+}
+.medica-brand{ font-weight:800; font-size:18px; letter-spacing:.3px; }
+.medica-nav{ display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+
+.nav-item{
+  display:block; width:100%; text-align:left;
+  padding:10px 12px; border-radius:10px;
+  color:#e2e8f0; background:transparent; border:0;
+  text-decoration:none; cursor:pointer;
+  transition: background .15s ease, box-shadow .15s ease, color .15s ease;
+}
+.nav-item:hover{ background:rgba(255,255,255,.06); color:#fff; }
+.nav-item.active{
+  background:rgba(59,130,246,.25); color:#fff;
+  box-shadow:0 0 0 2px rgba(59,130,246,.15) inset;
+}
+.nav-item:focus-visible{ outline:2px solid rgba(59,130,246,.6); outline-offset:2px; }
+
+.medica-userbox{ margin-top:auto; border-top:1px solid rgba(255,255,255,.08); padding-top:12px; }
+.medica-userline{ font-size:12px; margin-bottom:2px; }
+.medica-userline.small{ opacity:.85; }
+.link-ghost{ margin-top:6px; background:transparent; color:#cbd5e1; border:0; text-decoration:underline; cursor:pointer; }
+.link-ghost:hover{ color:#fff; }
+
+/* ========= Main ========= */
+.medica-main{ display:flex; flex-direction:column; min-width:0; }
+.medica-topbar{
+  height:64px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 16px; background:var(--panel); border-bottom:1px solid var(--border);
+}
+.medica-topbar h1{ margin:0; }
+.muted{ color:var(--muted); font-size:14px; }
+.topbar-actions{ display:flex; align-items:center; gap:12px; }
+.medica-content{ padding:16px; display:grid; gap:16px; }
+
+/* ========= Cards & inputs ========= */
+.card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:16px;
+  box-shadow:var(--shadow);
+}
+.card-header{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.card-header-right{ display:flex; gap:8px; align-items:center; }
+.card-actions{ display:flex; gap:10px; align-items:center; }
+
+.input, .form-row input, .card select, .card textarea{
+  background:var(--panel-2); color:var(--text);
+  border:1px solid var(--border); border-radius:10px; padding:10px 12px; outline:none; width:100%;
+}
+.input::placeholder, .form-row input::placeholder{ color:#8aa0bb; }
+.input:focus, .form-row input:focus, .card select:focus, .card textarea:focus{
+  border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.25);
+}
+
+/* Fila/col del formulario */
+.form-row{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:12px;
+  margin-top:12px;
+}
+.form-item{ display:flex; flex-direction:column; gap:6px; }
+.small-label{ color:var(--muted); font-size:12px; }
+
+/* ========= Buttons ========= */
+.btn-primary, .btn-secondary{ border:0; border-radius:10px; cursor:pointer; font-weight:700; }
+.btn-primary{ background:var(--primary); color:#fff; padding:10px 14px; box-shadow:var(--shadow); }
+.btn-primary:hover{ background:var(--primary-600); }
+.btn-secondary{ background:var(--cyan); color:#041019; padding:8px 12px; }
+.btn-secondary:hover{ filter:brightness(.95); }
+
+.btn-green, .btn-danger{ border-radius:10px; padding:8px 12px; font-weight:700; cursor:pointer; border:1px solid transparent; }
+.btn-green{ background:var(--green); color:#0b0f14; }
+.btn-green:hover{ background:var(--green-600); color:#051018; }
+.btn-danger{ background:var(--red); color:#fff; }
+.btn-danger:hover{ background:var(--red-600); }
+
+/* ========= Alerts & table ========= */
+.alert-info{ background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.35); color:var(--text); padding:10px; border-radius:10px; }
+.table-wrap{ overflow-x:auto; }
+.table{ min-width:760px; width:100%; border-collapse:collapse; }
+.table th, .table td{ text-align:left; padding:10px 12px; border:1px solid var(--border); }
+.table thead th{ background:var(--table-head-bg); color:var(--table-head-text); font-weight:700; }
+.td-center{ text-align:center; padding:12px; border:1px solid var(--border); }
+.pad{ padding:8px; }
+
+/* ========= KPIs ========= */
+.kpi-grid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap:16px;
+}
+.kpi{
+  background:var(--panel-2);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:14px;
+  box-shadow:var(--shadow);
+}
+.kpi-title{ color:var(--muted); font-size:14px; margin-bottom:8px; }
+.kpi-value{ font-size:34px; font-weight:800; }
+
+/* ========= Badges ========= */
+.badge{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); font-weight:800; }
+.badge.dot::before{ content:""; width:8px; height:8px; border-radius:50%; background:currentColor; display:inline-block; }
+.badge.pendiente{ color:#f87171; }
+.badge.en_progreso{ color:#fbbf24; }
+.badge.completado{ color:#34d399; }
+.badge.validado{ color:#60a5fa; }
+.badge.enviado{ color:#a78bfa; }
+.badge.borrador{ color:#9bb0c9; }
+
+/* ========= Extras usados en el JSX ========= */
+.details-quick{
+  margin-top:10px;
+  background:var(--panel-2);
+  border:1px solid var(--border);
+  border-radius:10px;
+}
+.summary-quick{
+  list-style:none;
+  cursor:pointer;
+  padding:10px 12px;
+  font-weight:700;
+  color:var(--text);
+}
+.details-quick[open] .summary-quick{ border-bottom:1px solid var(--border); }
+.quick-body{ padding:12px; }
+
+.link{ color:#93c5fd; text-decoration:underline; }
+.link:hover{ color:#bfdbfe; }
+
+.mt-2{ margin-top:8px; }
+
+/* ========= Breakpoints ========= */
+@media (max-width: 1280px){
+  .medica-shell{ grid-template-columns:240px minmax(0,1fr); }
+  .kpi-grid{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+}
+@media (max-width: 1024px){
+  .medica-shell{ grid-template-columns:220px minmax(0,1fr); }
+  .kpi-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .form-row{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 780px){
+  .medica-shell{ grid-template-columns:1fr; }
+  .medica-sidebar{
+    position:sticky; top:0; z-index:10;
+    border-right:none; border-bottom:1px solid var(--border);
+  }
+  .medica-topbar{ height:auto; padding:12px 16px; gap:8px; flex-wrap:wrap; }
+  .topbar-actions{ width:100%; justify-content:flex-end; }
+  .medica-sidebar .nav-item{ padding:12px 14px; }
+  .kpi-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .form-row{ grid-template-columns:1fr; }
+}
+@media (max-width: 480px){
+  .kpi-grid{ grid-template-columns:1fr; }
+}
