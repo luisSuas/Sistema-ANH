@@ -45,6 +45,13 @@ import CasoDetallePsicologica from "./psicologica/CasoDetalle";
 import VictimasListaPsicologica from "./psicologica/VictimasLista";
 import CasoNuevoPsicologica from "./psicologica/CasoNuevo";
 
+/* ========= ESPACIOS LIBRES ========= */
+import EspaciosLibresHomeGate from "./espacioslibres/EspaciosLibresHomeGate";
+import CasoDetalleEspaciosLibres from "./espacioslibres/CasoDetalle";
+import VictimasListaEspaciosLibres from "./espacioslibres/VictimasLista";
+import CasoNuevoEspaciosLibres from "./espacioslibres/CasoNuevo";
+
+
 /* ========= ADMIN PANEL ========= */
 import AdminLayout from "./Admin/AdminLayout";
 import AdminHome from "./Admin/AdminHome";
@@ -64,17 +71,17 @@ function normalizeAreaSlug(s) {
     .replace(/\b(area|operativa?|coordinacion)\b/g, "")
     .trim();
 
-  const map = { social:"social", albergue:"albergue", legal:"legal", medica:"medica", psicologica:"psicologica" };
+  const map = { social:"social", albergue:"albergue", legal:"legal", medica:"medica", psicologica:"psicologica", espacioslibres:"espacioslibres" };
   return map[norm] || null;
 }
 
-const AREA_PATH_BY_ID = { 2:"/social", 3:"/legal", 4:"/medica", 5:"/albergue", 6:"/psicologica" };
+const AREA_PATH_BY_ID = { 1: "/social", 2: "/legal", 3: "/medica", 4: "/psicologica", 5: "/albergue", 6: "/espacioslibres" };
 const ADMIN_ROLE = 4;
 
 function getHomeForUser() {
   const t = localStorage.getItem("access_token");
   const p = t ? decodeJwtPayload(t) : null;
-  const role = Number(p?.role);
+  const role = Number(p?.role ?? p?.role_id ?? p?.roleId ?? p?.rol ?? p?.rol_id ?? p?.rolId);
 
   if (role === ADMIN_ROLE) return "/admin";
   if (role === 1) return "/general";
@@ -180,6 +187,13 @@ function AppRoutes() {
       <Route path="/psicologica/casos/nuevo" element={<ProtectedRoute><CasoNuevoPsicologica /></ProtectedRoute>} />
       <Route path="/psicologica/casos/:id" element={<ProtectedRoute><CasoDetallePsicologica /></ProtectedRoute>} />
       <Route path="/psicologica/victimas" element={<ProtectedRoute><VictimasListaPsicologica /></ProtectedRoute>} />
+
+      {/* ESPACIOS LIBRES */}
+      <Route path="/espacioslibres" element={<ProtectedRoute><EspaciosLibresHomeGate /></ProtectedRoute>} />
+      <Route path="/espacioslibres/casos/nuevo" element={<ProtectedRoute><CasoNuevoEspaciosLibres /></ProtectedRoute>} />
+      <Route path="/espacioslibres/casos/:id" element={<ProtectedRoute><CasoDetalleEspaciosLibres /></ProtectedRoute>} />
+      <Route path="/espacioslibres/victimas" element={<ProtectedRoute><VictimasListaEspaciosLibres /></ProtectedRoute>} />
+
 
       <Route path="/" element={<HomeRedirect />} />
       <Route path="*" element={<HomeRedirect />} />

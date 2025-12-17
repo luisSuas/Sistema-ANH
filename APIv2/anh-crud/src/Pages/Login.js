@@ -98,6 +98,7 @@ function routeByRoleArea(role, area) {
     3: "/medica",
     4: "/psicologica",
     5: "/albergue",
+    6: "/espacioslibres",
   };
   return map[Number(area)] || "/social";
 }
@@ -141,8 +142,19 @@ const Login = ({ onSuccess }) => {
     localStorage.setItem("access_token", token);
     authLogin(token);
     const p = decodeJwt(token);
-    const target = routeByRoleArea(Number(p?.role), Number(p?.area));
-    navigate(target, { replace: true });
+
+// ✅ Soporta distintos nombres de claims sin romper lo actual
+const role = Number(
+  p?.role ?? p?.role_id ?? p?.roleId ?? p?.rol ?? p?.rol_id ?? p?.rolId
+);
+
+const area = Number(
+  p?.area ?? p?.area_id ?? p?.areaId ?? p?.areaid
+);
+
+const target = routeByRoleArea(role, area);
+navigate(target, { replace: true });
+
   }
 
   // ⬇️ Reintento directo al API con OTP (fallback por si Servicios.login no lo soporta)
