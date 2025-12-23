@@ -321,34 +321,6 @@ navigate(target, { replace: true });
               </button>
             </div>
           </div>
-
-          {/* Estilos mínimos para el modal (no invade tu CSS) */}
-          <style>{`
-            .mfa-backdrop {
-              position: fixed; inset: 0; background: rgba(0,0,0,.55);
-              display:flex; align-items:center; justify-content:center; z-index: 50;
-            }
-            .mfa-modal {
-              width: 360px; background: var(--panel); color: var(--text);
-              border-radius: 16px; padding: 22px; box-shadow: 0 10px 35px rgba(0,0,0,.5);
-              display: flex; flex-direction: column; gap: 10px;
-              border: 1px solid var(--border);
-            }
-            .mfa-modal input {
-              background: var(--panel-2); border:1px solid var(--border); color: var(--text);
-              padding:10px 12px; border-radius:10px; outline:none; text-align:center;
-              font-size: 18px; letter-spacing: 2px;
-            }
-            .mfa-actions { display:flex; gap:8px; justify-content:flex-end; margin-top: 8px; }
-            .mfa-actions button { border:none; padding:10px 12px; border-radius:10px; cursor:pointer; }
-            .mfa-actions button:not(.mfa-cancel) {
-              background: linear-gradient(180deg, #4776e6, #3b5bdb); color: white;
-            }
-            .mfa-cancel {
-              background: var(--panel-2); color: var(--text);
-              border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,.08);
-            }
-          `}</style>
         </div>
       )}
     </div>

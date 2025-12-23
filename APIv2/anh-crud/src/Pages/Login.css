@@ -216,3 +216,99 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe U
 @media (min-width: 520px){
   .auth-actions{ flex-direction: row; }
 }
+
+/* ============ MFA modal ============ */
+.mfa-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 12, 20, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  padding: 20px;
+}
+
+.mfa-modal {
+  width: min(92vw, 380px);
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  display: grid;
+  gap: 10px;
+  box-shadow:
+    0 18px 60px rgba(2, 6, 23, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.mfa-modal h3 {
+  margin: 0;
+  font-size: 18px;
+  text-align: center;
+}
+
+.mfa-modal p {
+  margin: 0 0 4px;
+  font-size: 14px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.mfa-modal input {
+  width: 100%;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 12px;
+  border-radius: 12px;
+  outline: none;
+  text-align: center;
+  font-size: 18px;
+  letter-spacing: 2px;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+
+.mfa-modal input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+  background: var(--panel);
+}
+
+.mfa-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.mfa-actions button {
+  border: 1px solid transparent;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--panel-2);
+  color: var(--text);
+  transition: transform .08s ease, filter .2s ease, opacity .2s ease;
+}
+
+.mfa-actions button:not(.mfa-cancel) {
+  background: linear-gradient(180deg, var(--brand), var(--brand-strong));
+  color: #fff;
+}
+
+.mfa-actions button:hover { transform: translateY(-1px); }
+.mfa-actions button:active { transform: translateY(0); }
+.mfa-actions button:disabled { opacity: .7; cursor: not-allowed; }
+
+.mfa-cancel {
+  border: 1px solid var(--border);
+  background: transparent;
+}
+
+:root[data-theme="light"] .mfa-backdrop {
+  background: rgba(15, 23, 42, 0.3);
+}
