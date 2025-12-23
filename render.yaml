@@ -23,7 +23,7 @@ services:
   # ───────── FRONTEND (React en ./anh-crud) ─────────
   - type: static
     name: caimus-frontend
-    rootDir: anh-crud
+    rootDir: APIv2/anh-crud
     buildCommand: npm ci && npm run build
     staticPublishPath: build
     autoDeploy: true

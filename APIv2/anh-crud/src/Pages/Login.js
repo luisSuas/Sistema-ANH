@@ -2,7 +2,7 @@
 import React, { useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { login as doLogin } from "../servicios/Servicios";
+import { login as doLogin, API_BASE_URL } from "../servicios/Servicios";
 import "./Login.css";
 
 function getStoredToken() {
@@ -58,7 +58,7 @@ function extractToken(maybeToken) {
 
 // Para reintentar el login con OTP si tu Servicios.login aún no lo envía.
 const API_LOGIN_URL =
-  process.env.REACT_APP_API_LOGIN || "http://localhost:8800/apiv2/auth/login";
+  process.env.REACT_APP_API_LOGIN || `${API_BASE_URL}/auth/login`;
 
 const Login = ({ onSuccess }) => {
   const navigate = useNavigate();

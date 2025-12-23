@@ -10,7 +10,16 @@ import axios from "axios";
   }
 })();
 
-const RAW = (process.env.REACT_APP_API_URL || "http://localhost:8800").trim();
+const DEFAULT_LOCAL_API = "http://localhost:8800";
+
+function getDefaultApiHost() {
+  if (typeof window === "undefined") return DEFAULT_LOCAL_API;
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") return DEFAULT_LOCAL_API;
+  return window.location.origin;
+}
+
+const RAW = (process.env.REACT_APP_API_URL || getDefaultApiHost()).trim();
 
 function normalizeHost(raw) {
   let host = raw;
@@ -26,6 +35,7 @@ function stripApiV2(host) {
 
 const API_HOST = stripApiV2(normalizeHost(RAW));
 const BASE_URL = `${API_HOST}/apiv2`;
+export const API_BASE_URL = BASE_URL;
 
 /** Instancia central de axios */
 const api = axios.create({
