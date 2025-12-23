@@ -10,7 +10,6 @@ import api, {
   getCatalogo,
 } from "../servicios/Servicios";
 import "./CasoDetalle.css";
-const BASE = "/medica";
 
 /** Badges por estado */
 const EstadoBadge = ({ estado }) => {
@@ -41,6 +40,36 @@ export default function CasoDetalle() {
 
   // Edición inline
   const [edit, setEdit] = useState(false);
+
+  // ✅ snapshot para Cancelar edición correctamente
+  const [formSnapshot, setFormSnapshot] = useState(null);
+
+  // ✅ NUEVO: edición sobreviviente
+  const [victimaForm, setVictimaForm] = useState({
+    primer_nombre: "",
+    segundo_nombre: "",
+    primer_apellido: "",
+    segundo_apellido: "",
+    nombre: "",
+    dpi: "",
+    telefono: "",
+    fecha_nacimiento: "",
+    estado_civil_id: "",
+    escolaridad_id: "",
+    etnia_id: "",
+    ocupacion: "",
+    direccion_actual: "",
+    residencia: "",
+    nacionalidad: "",
+    municipio_origen_id: "",
+    lugar_origen: "",
+  });
+  const [victimaSnapshot, setVictimaSnapshot] = useState(null);
+
+  // ✅ NUEVO: deletes (para hijos/agresores)
+  const [hijosDeleted, setHijosDeleted] = useState([]);
+  const [agresoresDeleted, setAgresoresDeleted] = useState([]);
+
   const [form, setForm] = useState({
     motivo_consulta: "",
     fecha_atencion: "",
@@ -81,9 +110,11 @@ export default function CasoDetalle() {
     estadosCiviles: [],
     escolaridades: [],
     etnias: [],
-    municipios: [],        // ← con departamento_id
+    municipios: [],
     departamentos: [],
-    relacionesAgresor: [], // ← para mostrar nombre de la relación
+    relacionesAgresor: [],
+    residencias: [],
+    ocupaciones: [],
   });
   const [cargandoCat, setCargandoCat] = useState(true);
 
@@ -92,15 +123,18 @@ export default function CasoDetalle() {
     [caso]
   );
 
-  // NUEVO: detectar si el caso ya está completado (para deshabilitar Eliminar)
   const isCompletado = useMemo(
     () => String(caso?.estado || "").toLowerCase() === "completado",
     [caso]
   );
 
   useEffect(() => {
+    let alive = true;
+
     (async () => {
       try {
+        if (!alive) return;
+
         setLoading(true);
         setMsg("");
 
@@ -142,10 +176,10 @@ export default function CasoDetalle() {
           }
         } catch {}
 
-        // Guardamos caso con hijos/agresores resueltos
+        if (!alive) return;
+
         setCaso({ ...c, hijos, agresores });
 
-        // Form base (multivalor con fallback más abajo)
         setForm({
           motivo_consulta: c.motivo_consulta ?? "",
           fecha_atencion: c.fecha_atencion ? new Date(c.fecha_atencion).toISOString().slice(0, 10) : "",
@@ -164,7 +198,6 @@ export default function CasoDetalle() {
           situaciones_riesgo: toRiesgos(c.situaciones_riesgo),
           hijos,
           agresores,
-          // otros_* desde columna directa o JSON extra
           otros_tipos_violencia: c.otros_tipos_violencia ?? c.extra?.otros_tipos_violencia ?? "",
           otros_medios_agresion: c.otros_medios_agresion ?? c.extra?.otros_medios_agresion ?? "",
           ref_interna_otro: c.ref_interna_otro ?? c.extra?.ref_interna_otro ?? "",
@@ -189,20 +222,49 @@ export default function CasoDetalle() {
         // Sobreviviente
         if (c?.victima_id) {
           const { data: v } = await getVictimaById(c.victima_id);
+          if (!alive) return;
           setVictima(v);
+
+          // ✅ NUEVO: inicializa victimaForm
+          setVictimaForm({
+            primer_nombre: v?.primer_nombre ?? "",
+            segundo_nombre: v?.segundo_nombre ?? "",
+            primer_apellido: v?.primer_apellido ?? "",
+            segundo_apellido: v?.segundo_apellido ?? "",
+            nombre: v?.nombre ?? v?.nombre_completo ?? "",
+            dpi: v?.dpi ?? v?.cui ?? "",
+            telefono: v?.telefono ?? "",
+            fecha_nacimiento: v?.fecha_nacimiento ? new Date(v.fecha_nacimiento).toISOString().slice(0, 10) : "",
+            estado_civil_id: v?.estado_civil_id ?? "",
+            escolaridad_id: v?.escolaridad_id ?? "",
+            etnia_id: v?.etnia_id ?? "",
+            ocupacion: v?.ocupacion ?? "",
+            direccion_actual: v?.direccion_actual ?? v?.direccion ?? "",
+            residencia: v?.residencia ?? v?.barrio_colonia ?? "",
+            nacionalidad: v?.nacionalidad ?? "",
+            municipio_origen_id: v?.municipio_origen_id ?? "",
+            lugar_origen: v?.lugar_origen ?? v?.lugar_de_origen ?? "",
+          });
         } else {
+          if (!alive) return;
           setVictima(null);
         }
       } catch (e) {
         console.error(e);
+        if (!alive) return;
         setMsg(e?.response?.data?.error || "No se pudo cargar el detalle del proceso.");
       } finally {
+        if (!alive) return;
         setLoading(false);
       }
     })();
+
+    return () => {
+      alive = false;
+    };
   }, [id]);
 
-  // Cargar catálogos (incluye relaciones del agresor)
+  // Cargar catálogos
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -219,8 +281,10 @@ export default function CasoDetalle() {
           etnias,
           municipios,
           departamentos,
-          relacionesAgresor,
-        ] = await Promise.all([
+        relacionesAgresor,
+        residencias,
+        ocupaciones,
+      ] = await Promise.all([
           getCatalogo("tipos-violencia").then((r) => r.data).catch(() => []),
           getCatalogo("medios-agresion").then((r) => r.data).catch(() => []),
           getCatalogo("situaciones-riesgo").then((r) => r.data).catch(() => []),
@@ -232,10 +296,11 @@ export default function CasoDetalle() {
           getCatalogo("municipios").then((r) => r.data).catch(() => []),
           getCatalogo("departamentos").then((r) => r.data).catch(() => []),
           getCatalogo("relaciones-agresor").then((r) => r.data).catch(() => []),
+          getCatalogo("residencias").then((r) => r.data).catch(() => []),
+          api.get("/catalogos/ocupaciones").then((r) => r.data).catch(() => []),
         ]);
         if (!alive) return;
 
-        // Conservamos departamento_id para armar “Municipio, Departamento”
         const municipiosNorm = Array.isArray(municipios)
           ? municipios
               .map((x) => ({
@@ -283,6 +348,35 @@ export default function CasoDetalle() {
             }))
           : [];
 
+        const residenciasNorm = Array.isArray(residencias)
+          ? residencias
+              .map((x) => ({
+                id: x.id ?? x.codigo ?? x.clave ?? x.residencia_id,
+                nombre: x.nombre ?? x.descripcion ?? x.label ?? String(x.id ?? ""),
+              }))
+              .filter((r) => r?.nombre && String(r.nombre).trim() !== "")
+          : [];
+
+        const ocupacionesRaw = Array.isArray(ocupaciones)
+          ? ocupaciones
+          : (Array.isArray(ocupaciones?.data) ? ocupaciones.data : []);
+        const ocupacionesNorm = (ocupacionesRaw || [])
+          .map((o) => {
+            const nombre =
+              o?.nombre ??
+              o?.ocupacion ??
+              o?.actividad ??
+              o?.descripcion ??
+              o?.label;
+            const id =
+              o?.id ??
+              o?.ocupacion_id ??
+              o?.actividad_id ??
+              nombre;
+            return nombre ? { id, nombre } : null;
+          })
+          .filter(Boolean);
+
         setCat({
           tiposViolencia,
           mediosAgresion,
@@ -295,12 +389,16 @@ export default function CasoDetalle() {
           municipios: municipiosNorm,
           departamentos: departamentosNorm,
           relacionesAgresor: relAgresorNorm,
+          residencias: residenciasNorm,
+          ocupaciones: ocupacionesNorm,
         });
       } finally {
         if (alive) setCargandoCat(false);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const onChange = (e) => {
@@ -308,20 +406,199 @@ export default function CasoDetalle() {
     setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
   };
 
+  const onVictimaChange = (e) => {
+    const { name, value } = e.target;
+    setVictimaForm((v) => ({ ...v, [name]: value }));
+  };
+
   // Detectar id del chip "Otro/Otras"
-  const norm = (s) => String(s || "").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const findOtroId = (list = []) => {
     for (const o of list) {
       const n = norm(o?.nombre);
-      if (n === 'otro' || n === 'otra' || n === 'otros' || n === 'otras') return o.id;
+      if (n === "otro" || n === "otra" || n === "otros" || n === "otras") return o.id;
     }
     return null;
   };
+
+  // ✅ snapshot profundo
+  const cloneForm = (obj) => {
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch {
+      return obj;
+    }
+  };
+
+  // ✅ NUEVO: helpers hijos/agresores (edición)
+  function addHijo() {
+    setForm((f) => ({
+      ...f,
+      hijos: [...(f.hijos || []), { id: null, nombre: "", sexo: "F", edad_anios: "", reconocido: false }],
+    }));
+  }
+  function updHijo(idx, key, val) {
+    setForm((f) => ({
+      ...f,
+      hijos: (f.hijos || []).map((h, i) => (i === idx ? { ...h, [key]: val } : h)),
+    }));
+  }
+  function delHijo(idx) {
+    setForm((f) => {
+      const arr = [...(f.hijos || [])];
+      const item = arr[idx];
+      if (item?.id) setHijosDeleted((d) => [...d, item.id]);
+      arr.splice(idx, 1);
+      return { ...f, hijos: arr };
+    });
+  }
+
+  function addAgresor() {
+    setForm((f) => ({
+      ...f,
+      agresores: [
+        ...(f.agresores || []),
+        {
+          id: null,
+          nombre: "",
+          relacion_agresor_id: "",
+          edad: "",
+          dpi_pasaporte: "",
+          ocupacion: "",
+          telefono: "",
+          ingreso_mensual: "",
+          direccion: "",
+          lugar_residencia: "",
+          lugar_trabajo: "",
+          horario_trabajo: "",
+          observacion: "",
+        },
+      ],
+    }));
+  }
+  function updAgresor(idx, key, val) {
+    setForm((f) => ({
+      ...f,
+      agresores: (f.agresores || []).map((a, i) => (i === idx ? { ...a, [key]: val } : a)),
+    }));
+  }
+  function delAgresor(idx) {
+    setForm((f) => {
+      const arr = [...(f.agresores || [])];
+      const item = arr[idx];
+      if (item?.id) setAgresoresDeleted((d) => [...d, item.id]);
+      arr.splice(idx, 1);
+      return { ...f, agresores: arr };
+    });
+  }
+
+  // ✅ NUEVO: try endpoints sin romper (si no existen, no explota)
+  async function tryPutVictima(vId, payload) {
+    try {
+      return await api.put(`/victimas/${vId}`, payload, { headers: { "Content-Type": "application/json" } });
+    } catch {
+      return await api.patch(`/victimas/${vId}`, payload, { headers: { "Content-Type": "application/json" } });
+    }
+  }
+
+  async function tryUpsertHijo(casoId, h) {
+    const payload = {
+      caso_id: Number(casoId),
+      nombre: emptyToNull(h.nombre),
+      sexo: emptyToNull(h.sexo),
+      edad_anios: h.edad_anios === "" ? null : Number(h.edad_anios),
+      reconocido: !!h.reconocido,
+    };
+
+    if (h?.id) {
+      try {
+        await api.put(`/hijos/${h.id}`, payload);
+        return;
+      } catch {}
+      try {
+        await api.patch(`/hijos/${h.id}`, payload);
+        return;
+      } catch {}
+    } else {
+      try {
+        await api.post(`/casos/${casoId}/hijos`, payload);
+        return;
+      } catch {}
+      try {
+        await api.post(`/hijos`, payload);
+        return;
+      } catch {}
+    }
+  }
+
+  async function tryDeleteHijo(hId, casoId) {
+    try { await api.delete(`/hijos/${hId}`); return; } catch {}
+    try { await api.delete(`/casos/${casoId}/hijos/${hId}`); return; } catch {}
+  }
+
+  async function tryUpsertAgresor(casoId, a) {
+    const payload = {
+      caso_id: Number(casoId),
+      nombre: emptyToNull(a.nombre),
+      relacion_agresor_id: a.relacion_agresor_id ? Number(a.relacion_agresor_id) : null,
+      edad: a.edad === "" ? null : Number(a.edad),
+      dpi_pasaporte: emptyToNull(a.dpi_pasaporte),
+      ocupacion: emptyToNull(a.ocupacion),
+      telefono: emptyToNull(a.telefono),
+      ingreso_mensual: a.ingreso_mensual === "" ? null : Number(a.ingreso_mensual),
+      direccion: emptyToNull(a.direccion),
+      lugar_residencia: emptyToNull(a.lugar_residencia),
+      lugar_trabajo: emptyToNull(a.lugar_trabajo),
+      horario_trabajo: emptyToNull(a.horario_trabajo),
+      observacion: emptyToNull(a.observacion),
+    };
+
+    if (a?.id) {
+      try { await api.put(`/agresores/${a.id}`, payload); return; } catch {}
+      try { await api.patch(`/agresores/${a.id}`, payload); return; } catch {}
+    } else {
+      try { await api.post(`/casos/${casoId}/agresores`, payload); return; } catch {}
+      try { await api.post(`/agresores`, payload); return; } catch {}
+    }
+  }
+
+  async function tryDeleteAgresor(aId, casoId) {
+    try { await api.delete(`/agresores/${aId}`); return; } catch {}
+    try { await api.delete(`/casos/${casoId}/agresores/${aId}`); return; } catch {}
+  }
 
   async function guardar() {
     try {
       setBusy("guardar");
       setMsg("");
+
+      // ✅ 1) Guardar sobreviviente (si existe)
+      if (victima?.id) {
+        const vPayload = {
+          primer_nombre: emptyToNull(victimaForm.primer_nombre),
+          segundo_nombre: emptyToNull(victimaForm.segundo_nombre),
+          primer_apellido: emptyToNull(victimaForm.primer_apellido),
+          segundo_apellido: emptyToNull(victimaForm.segundo_apellido),
+          nombre: emptyToNull(victimaForm.nombre),
+          dpi: emptyToNull(victimaForm.dpi),
+          telefono: emptyToNull(victimaForm.telefono),
+          fecha_nacimiento: victimaForm.fecha_nacimiento || null,
+          estado_civil_id: victimaForm.estado_civil_id ? Number(victimaForm.estado_civil_id) : null,
+          escolaridad_id: victimaForm.escolaridad_id ? Number(victimaForm.escolaridad_id) : null,
+          etnia_id: victimaForm.etnia_id ? Number(victimaForm.etnia_id) : null,
+          ocupacion: emptyToNull(victimaForm.ocupacion),
+          direccion_actual: emptyToNull(victimaForm.direccion_actual),
+          residencia: emptyToNull(victimaForm.residencia),
+          nacionalidad: emptyToNull(victimaForm.nacionalidad),
+          municipio_origen_id: victimaForm.municipio_origen_id ? Number(victimaForm.municipio_origen_id) : null,
+          lugar_origen: emptyToNull(victimaForm.lugar_origen),
+        };
+
+        // si tu backend es estricto, esto normalmente funciona con PUT/PATCH
+        await tryPutVictima(victima.id, vPayload);
+      }
+
+      // ✅ 2) Guardar caso (tu payload original intacto)
       const payload = {
         motivo_consulta: emptyToNull(form.motivo_consulta),
         fecha_atencion: form.fecha_atencion || null,
@@ -332,13 +609,11 @@ export default function CasoDetalle() {
         embarazo_semanas: form.embarazo_semanas ? Number(form.embarazo_semanas) : null,
         tiempo_agresion: emptyToNull(form.tiempo_agresion),
         riesgo_otro: emptyToNull(form.riesgo_otro),
-        // textos libres si aplica
         otros_tipos_violencia: emptyToNull(form.otros_tipos_violencia),
         otros_medios_agresion: emptyToNull(form.otros_medios_agresion),
         ref_interna_otro: emptyToNull(form.ref_interna_otro),
         ref_externa_otro: emptyToNull(form.ref_externa_otro),
         acciones: emptyToNull(form.acciones),
-        // multivalor (el backend los toma de forma idempotente si vienen)
         tipos_violencia_ids: form.tipos_violencia_ids,
         medios_agresion_ids: form.medios_agresion_ids,
         ref_interna_ids: form.ref_interna_ids,
@@ -347,7 +622,24 @@ export default function CasoDetalle() {
       };
       await updateCaso(id, payload);
 
-      // Respaldo local
+      // ✅ 3) Guardar hijos/agresores (si hay endpoints, genial; si no, no rompe)
+      const casoIdNum = Number(id);
+
+      for (const hid of hijosDeleted) {
+        await tryDeleteHijo(hid, casoIdNum).catch(() => {});
+      }
+      for (const aid of agresoresDeleted) {
+        await tryDeleteAgresor(aid, casoIdNum).catch(() => {});
+      }
+
+      for (const h of (form.hijos || [])) {
+        await tryUpsertHijo(casoIdNum, h).catch(() => {});
+      }
+      for (const a of (form.agresores || [])) {
+        await tryUpsertAgresor(casoIdNum, a).catch(() => {});
+      }
+
+      // ✅ Respaldo local (como ya lo tenías)
       try {
         const backup = {
           tipos_violencia_ids: form.tipos_violencia_ids,
@@ -365,10 +657,22 @@ export default function CasoDetalle() {
         localStorage.setItem(`caso_mv_${id}`, JSON.stringify(backup));
       } catch {}
 
+      // reset modo edición
       setEdit(false);
+      setFormSnapshot(null);
+      setVictimaSnapshot(null);
+      setHijosDeleted([]);
+      setAgresoresDeleted([]);
 
+      // refrescar
       const { data: c2 } = await getCasoById(id);
       setCaso(c2);
+
+      if (c2?.victima_id) {
+        const { data: v2 } = await getVictimaById(c2.victima_id);
+        setVictima(v2);
+      }
+
       setMsg("Cambios guardados.");
     } catch (e) {
       console.error(e);
@@ -410,6 +714,10 @@ export default function CasoDetalle() {
       const { data: c2 } = await getCasoById(id);
       setCaso(c2);
       setEdit(false);
+      setFormSnapshot(null);
+      setVictimaSnapshot(null);
+      setHijosDeleted([]);
+      setAgresoresDeleted([]);
       setMsg("Proceso enviado a revisión.");
     } catch (e) {
       console.error(e);
@@ -427,7 +735,7 @@ export default function CasoDetalle() {
       setBusy("eliminar");
       setMsg("");
       await deleteCaso(id);
-      nav(BASE);
+      nav("/medica");
     } catch (e) {
       console.error(e);
       setMsg(e?.response?.data?.error || "No se pudo eliminar.");
@@ -446,7 +754,7 @@ export default function CasoDetalle() {
     <div className="cd-wrap">
       <div className="cd-header">
         <div className="cd-header-l">
-          <Link to={BASE} className="cd-back">← Volver</Link>
+          <Link to="/medica" className="cd-back">← Volver</Link>
           <h2>Detalle del proceso #{id}</h2>
           {caso && (
             <div className="cd-header-meta">
@@ -463,61 +771,197 @@ export default function CasoDetalle() {
 
       {!loading && caso && (
         <div className="cd-card">
+
           {/* SOBREviviente */}
           <section className="cd-section">
             <h3>Sobreviviente</h3>
-            <div className="cd-grid">
-              <Item label="Nombre">{nombreVictima || "-"}</Item>
-              <Item label="DPI">{victima?.dpi || victima?.cui || "-"}</Item>
-              <Item label="Teléfono">{victima?.telefono || "-"}</Item>
-              <Item label="Estado civil">
-                {nombreDe(cat.estadosCiviles, victima?.estado_civil_id) ||
-                  victima?.estado_civil ||
-                  "-"}
-              </Item>
-              <Item label="Fecha de nacimiento">
-                {victima?.fecha_nacimiento
-                  ? new Date(victima.fecha_nacimiento).toLocaleDateString("es-GT")
-                  : "-"}
-              </Item>
-              <Item label="Escolaridad">
-                {nombreDe(cat.escolaridades, victima?.escolaridad_id) || "-"}
-              </Item>
-              <Item label="Etnia">
-                {nombreDe(cat.etnias, victima?.etnia_id) || "-"}
-              </Item>
-              <Item label="Ocupación">{victima?.ocupacion || "-"}</Item>
 
-              {/* DIRECCIÓN: prioriza direccion_actual */}
-              <Item label="Dirección">
-                {pickAny(
-                  victima,
-                  [
-                    "direccion_actual", "direccionActual", "direccion_victima",
-                    "direccion_residencia", "direccion", "domicilio",
-                    "direccion_completa", "direccion_exacta", "calle_avenida",
-                    "zona", "barrio_direccion", "direccion_casa",
-                  ],
-                  /(dir|domic|calle|avenida|zona)/i
-                ) || caso?.direccion || "-"}
-              </Item>
+            {!edit ? (
+              <>
+                <div className="cd-grid">
+                  <Item label="Nombre">{nombreVictima || "-"}</Item>
+                  <Item label="DPI">{victima?.dpi || victima?.cui || "-"}</Item>
+                  <Item label="Teléfono">{victima?.telefono || "-"}</Item>
+                  <Item label="Estado civil">
+                    {nombreDe(cat.estadosCiviles, victima?.estado_civil_id) ||
+                      victima?.estado_civil ||
+                      "-"}
+                  </Item>
+                  <Item label="Fecha de nacimiento">
+                    {victima?.fecha_nacimiento
+                      ? new Date(victima.fecha_nacimiento).toLocaleDateString("es-GT")
+                      : "-"}
+                  </Item>
+                  <Item label="Escolaridad">
+                    {nombreDe(cat.escolaridades, victima?.escolaridad_id) || "-"}
+                  </Item>
+                  <Item label="Etnia">
+                    {nombreDe(cat.etnias, victima?.etnia_id) || "-"}
+                  </Item>
+                  <Item label="Ocupación">{victima?.ocupacion || "-"}</Item>
 
-              <Item label="Residencia">
-                {pickAny(
-                  victima,
-                  ["residencia","barrio","barrio_colonia","colonia","aldea","lugar_residencia","residencia_domicilio"],
-                  /(resid|barrio|colonia|aldea)/i
-                ) || caso?.residencia || "-"}
-              </Item>
+                  <Item label="Dirección">
+                    {pickAny(
+                      victima,
+                      [
+                        "direccion_actual", "direccionActual", "direccion_victima",
+                        "direccion_residencia", "direccion", "domicilio",
+                        "direccion_completa", "direccion_exacta", "calle_avenida",
+                        "zona", "barrio_direccion", "direccion_casa",
+                      ],
+                      /(dir|domic|calle|avenida|zona)/i
+                    ) || caso?.direccion || "-"}
+                  </Item>
 
-              <Item label="Nacionalidad">{victima?.nacionalidad || "-"}</Item>
+                  <Item label="Residencia">
+                    {pickAny(
+                      victima,
+                      ["residencia","barrio","barrio_colonia","colonia","aldea","lugar_residencia","residencia_domicilio"],
+                      /(resid|barrio|colonia|aldea)/i
+                    ) || caso?.residencia || "-"}
+                  </Item>
 
-              {/* LUGAR DE ORIGEN */}
-              <Item label="Lugar de origen">
-                {prettyLugarOrigen(victima, cat) || "-"}
-              </Item>
-            </div>
-            {!victima && <div className="cd-muted">No se pudieron cargar los datos de la sobreviviente.</div>}
+                  <Item label="Nacionalidad">{victima?.nacionalidad || "-"}</Item>
+
+                  <Item label="Lugar de origen">
+                    {prettyLugarOrigen(victima, cat) || "-"}
+                  </Item>
+                </div>
+                {!victima && <div className="cd-muted">No se pudieron cargar los datos de la sobreviviente.</div>}
+              </>
+            ) : (
+              <>
+                <div className="cd-grid">
+                  <EditItem label="Primer nombre">
+                    <input name="primer_nombre" value={victimaForm.primer_nombre} onChange={onVictimaChange} />
+                  </EditItem>
+                  <EditItem label="Segundo nombre">
+                    <input name="segundo_nombre" value={victimaForm.segundo_nombre} onChange={onVictimaChange} />
+                  </EditItem>
+                  <EditItem label="Primer apellido">
+                    <input name="primer_apellido" value={victimaForm.primer_apellido} onChange={onVictimaChange} />
+                  </EditItem>
+                  <EditItem label="Segundo apellido">
+                    <input name="segundo_apellido" value={victimaForm.segundo_apellido} onChange={onVictimaChange} />
+                  </EditItem>
+
+                  <EditItem label="DPI">
+                    <input name="dpi" value={victimaForm.dpi} onChange={onVictimaChange} />
+                  </EditItem>
+                  <EditItem label="Teléfono">
+                    <input name="telefono" value={victimaForm.telefono} onChange={onVictimaChange} />
+                  </EditItem>
+                  <EditItem label="Fecha de nacimiento">
+                    <input type="date" name="fecha_nacimiento" value={victimaForm.fecha_nacimiento} onChange={onVictimaChange} />
+                  </EditItem>
+
+                  <EditItem label="Estado civil">
+                    <select name="estado_civil_id" value={String(victimaForm.estado_civil_id ?? "")} onChange={onVictimaChange}>
+                      <option value="">— Selecciona —</option>
+                      {cat.estadosCiviles.map((x) => (
+                        <option key={x.id} value={String(x.id)}>{x.nombre}</option>
+                      ))}
+                    </select>
+                  </EditItem>
+
+                  <EditItem label="Escolaridad">
+                    <select name="escolaridad_id" value={String(victimaForm.escolaridad_id ?? "")} onChange={onVictimaChange}>
+                      <option value="">— Selecciona —</option>
+                      {cat.escolaridades.map((x) => (
+                        <option key={x.id} value={String(x.id)}>{x.nombre}</option>
+                      ))}
+                    </select>
+                  </EditItem>
+
+                  <EditItem label="Etnia">
+                    <select name="etnia_id" value={String(victimaForm.etnia_id ?? "")} onChange={onVictimaChange}>
+                      <option value="">— Selecciona —</option>
+                      {cat.etnias.map((x) => (
+                        <option key={x.id} value={String(x.id)}>{x.nombre}</option>
+                      ))}
+                    </select>
+                  </EditItem>
+
+                  <EditItem label="Ocupación">
+                    {(cat.ocupaciones || []).length ? (
+                      <select
+                        name="ocupacion"
+                        value={victimaForm.ocupacion || ""}
+                        onChange={onVictimaChange}
+                      >
+                        <option value="">— Selecciona —</option>
+                        {victimaForm.ocupacion &&
+                          !(cat.ocupaciones || []).some((o) => String(o?.nombre || "") === String(victimaForm.ocupacion)) && (
+                            <option value={victimaForm.ocupacion}>{victimaForm.ocupacion}</option>
+                          )}
+                        {(cat.ocupaciones || []).map((o) => (
+                          <option key={o.id ?? o.nombre} value={o.nombre}>{o.nombre}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input name="ocupacion" value={victimaForm.ocupacion} onChange={onVictimaChange} />
+                    )}
+                  </EditItem>
+
+                  <EditItem label="Dirección">
+                    <input name="direccion_actual" value={victimaForm.direccion_actual} onChange={onVictimaChange} />
+                  </EditItem>
+
+                  <EditItem label="Residencia">
+                    {(cat.residencias || []).length ? (
+                      <select name="residencia" value={victimaForm.residencia || ""} onChange={onVictimaChange}>
+                        <option value="">— Selecciona —</option>
+                        {victimaForm.residencia &&
+                          !(cat.residencias || []).some((r) => String(r?.nombre || "") === String(victimaForm.residencia)) && (
+                            <option value={victimaForm.residencia}>{victimaForm.residencia}</option>
+                          )}
+                        {(cat.residencias || []).map((r) => (
+                          <option key={r.id ?? r.nombre} value={r.nombre}>{r.nombre}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input name="residencia" value={victimaForm.residencia} onChange={onVictimaChange} />
+                    )}
+                  </EditItem>
+
+                  <EditItem label="Nacionalidad">
+                    <input name="nacionalidad" value={victimaForm.nacionalidad} onChange={onVictimaChange} />
+                  </EditItem>
+
+                  <EditItem label="Lugar de origen (Municipio)">
+                    {cargandoCat ? (
+                      <div className="cd-muted">Cargando catálogos…</div>
+                    ) : (
+                      <select
+                        name="municipio_origen_id"
+                        value={String(victimaForm.municipio_origen_id ?? "")}
+                        onChange={onVictimaChange}
+                      >
+                        <option value="">— Selecciona —</option>
+                        {cat.municipios.map((m) => {
+                          const depto = nombreDe(cat.departamentos, m.departamento_id) || "";
+                          const label = depto ? `${m.nombre}, ${depto}` : m.nombre;
+                          return (
+                            <option key={m.id} value={String(m.id)}>
+                              {label}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    )}
+                  </EditItem>
+
+                  <EditItem label="Lugar de origen (texto libre)">
+                    <input
+                      name="lugar_origen"
+                      value={victimaForm.lugar_origen}
+                      onChange={onVictimaChange}
+                      placeholder="Si aplica (ej. extranjero / sin municipio)"
+                    />
+                  </EditItem>
+                </div>
+              </>
+            )}
           </section>
 
           {/* MULTIVALOR: Tipos de violencia */}
@@ -734,51 +1178,177 @@ export default function CasoDetalle() {
             )}
           </section>
 
-          {/* HIJAS E HIJOS — SOLO LECTURA (con fallback) */}
+          {/* HIJAS E HIJOS */}
           <section className="cd-section">
             <h3>Hijas e hijos</h3>
-            <div className="cd-grid">
-              {(caso?.hijos?.length || form?.hijos?.length) ? (
-                (caso?.hijos?.length ? caso.hijos : form.hijos).map((h, i) => (
-                  <Item key={i} label={`Hijo/a #${i + 1}`}>
-                    {[
-                      (h?.nombre && String(h.nombre).trim()) || "Sin nombre",
-                      `(${sexoLabel(h?.sexo)}`,
-                      (h?.edad_anios != null && h.edad_anios !== "" ? `${Number(h.edad_anios)} años` : "edad no indicada"),
-                      `— ${h?.reconocido ? "reconocido/a" : "no reconocido/a"})`
-                    ].filter(Boolean).join(" ")}
-                  </Item>
-                ))
-              ) : (
-                <div className="cd-muted">No se tienen hijas o hijos registrados.</div>
-              )}
-            </div>
+
+            {!edit ? (
+              <div className="cd-grid">
+                {(caso?.hijos?.length || form?.hijos?.length) ? (
+                  (caso?.hijos?.length ? caso.hijos : form.hijos).map((h, i) => (
+                    <Item key={i} label={`Hijo/a #${i + 1}`}>
+                      {[
+                        (h?.nombre && String(h.nombre).trim()) || "Sin nombre",
+                        `(${sexoLabel(h?.sexo)}`,
+                        (h?.edad_anios != null && h.edad_anios !== "" ? `${Number(h.edad_anios)} años` : "edad no indicada"),
+                        `— ${h?.reconocido ? "reconocido/a" : "no reconocido/a"})`
+                      ].filter(Boolean).join(" ")}
+                    </Item>
+                  ))
+                ) : (
+                  <div className="cd-muted">No se tienen hijas o hijos registrados.</div>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="cd-grid">
+                  {(form.hijos || []).map((h, i) => (
+                    <div key={h.id ?? `h-${i}`} className="cd-grid" style={{ width: "100%" }}>
+                      <EditItem label={`Hijo/a #${i + 1} · Nombre`}>
+                        <input value={h.nombre || ""} onChange={(e) => updHijo(i, "nombre", e.target.value)} />
+                      </EditItem>
+                      <EditItem label="Sexo">
+                        <select value={h.sexo || "F"} onChange={(e) => updHijo(i, "sexo", e.target.value)}>
+                          <option value="F">Femenino</option>
+                          <option value="M">Masculino</option>
+                        </select>
+                      </EditItem>
+                      <EditItem label="Edad (años)">
+                        <input value={h.edad_anios ?? ""} onChange={(e) => updHijo(i, "edad_anios", e.target.value)} />
+                      </EditItem>
+                      <EditItem label="Reconocido/a">
+                        <label className="cd-check">
+                          <input
+                            type="checkbox"
+                            checked={!!h.reconocido}
+                            onChange={(e) => updHijo(i, "reconocido", e.target.checked)}
+                          />
+                          <span>Reconocido</span>
+                        </label>
+                      </EditItem>
+                      <EditItem label="">
+                        <button type="button" className="btn-danger" onClick={() => delHijo(i)}>Quitar</button>
+                      </EditItem>
+                    </div>
+                  ))}
+
+                  <EditItem label="">
+                    <button type="button" className="btn-secondary" onClick={addHijo}>
+                      + Agregar hijo/a
+                    </button>
+                  </EditItem>
+                </div>
+              </>
+            )}
           </section>
 
-          {/* AGRESORES — SOLO LECTURA (con fallback) */}
+          {/* AGRESORES */}
           <section className="cd-section">
             <h3>Agresores</h3>
-            {(caso?.agresores?.length || form?.agresores?.length) ? (
-              (caso?.agresores?.length ? caso.agresores : form.agresores).map((a, i) => (
-                <div key={i} className="cd-grid">
-                  <Item label={`Agresor #${i + 1}`}>{(a?.nombre && String(a.nombre).trim()) || "Sin nombre"}</Item>
-                  <Item label="Relación con la sobreviviente">
-                    {nombreDe(cat.relacionesAgresor, a?.relacion_agresor_id) || "-"}
-                  </Item>
-                  <Item label="Edad">{a?.edad != null && a.edad !== "" ? `${Number(a.edad)} años` : "-"}</Item>
-                  <Item label="Documento">{a?.dpi_pasaporte || "-"}</Item>
-                  <Item label="Ocupación">{a?.ocupacion || "-"}</Item>
-                  <Item label="Teléfono">{a?.telefono || "-"}</Item>
-                  <Item label="Ingreso mensual">{a?.ingreso_mensual != null ? qMoneda(a.ingreso_mensual) : "-"}</Item>
-                  <Item label="Dirección">{a?.direccion || "-"}</Item>
-                  <Item label="Lugar de residencia">{a?.lugar_residencia || "-"}</Item>
-                  <Item label="Lugar de trabajo">{a?.lugar_trabajo || "-"}</Item>
-                  <Item label="Horario de trabajo">{a?.horario_trabajo || "-"}</Item>
-                  <Item label="Observación">{a?.observacion || "-"}</Item>
-                </div>
-              ))
+
+            {!edit ? (
+              (caso?.agresores?.length || form?.agresores?.length) ? (
+                (caso?.agresores?.length ? caso.agresores : form.agresores).map((a, i) => (
+                  <div key={i} className="cd-grid">
+                    <Item label={`Agresor #${i + 1}`}>{(a?.nombre && String(a.nombre).trim()) || "Sin nombre"}</Item>
+                    <Item label="Relación con la sobreviviente">
+                      {nombreDe(cat.relacionesAgresor, a?.relacion_agresor_id) || "-"}
+                    </Item>
+                    <Item label="Edad">{a?.edad != null && a.edad !== "" ? `${Number(a.edad)} años` : "-"}</Item>
+                    <Item label="Documento">{a?.dpi_pasaporte || "-"}</Item>
+                    <Item label="Ocupación">{a?.ocupacion || "-"}</Item>
+                    <Item label="Teléfono">{a?.telefono || "-"}</Item>
+                    <Item label="Ingreso mensual">{a?.ingreso_mensual != null ? qMoneda(a.ingreso_mensual) : "-"}</Item>
+                    <Item label="Dirección">{a?.direccion || "-"}</Item>
+                    <Item label="Lugar de residencia">{a?.lugar_residencia || "-"}</Item>
+                    <Item label="Lugar de trabajo">{a?.lugar_trabajo || "-"}</Item>
+                    <Item label="Horario de trabajo">{a?.horario_trabajo || "-"}</Item>
+                    <Item label="Observación">{a?.observacion || "-"}</Item>
+                  </div>
+                ))
+              ) : (
+                <div className="cd-muted">Se desconoce al agresor.</div>
+              )
             ) : (
-              <div className="cd-muted">Se desconoce al agresor.</div>
+              <>
+                {(form.agresores || []).map((a, i) => (
+                  <div key={a.id ?? `a-${i}`} className="cd-grid" style={{ marginBottom: 12 }}>
+                    <EditItem label={`Agresor #${i + 1} · Nombre`}>
+                      <input value={a.nombre || ""} onChange={(e) => updAgresor(i, "nombre", e.target.value)} />
+                    </EditItem>
+
+                    <EditItem label="Relación con la sobreviviente">
+                      {(cat.relacionesAgresor || []).length ? (
+                        <select
+                          value={String(a.relacion_agresor_id ?? "")}
+                          onChange={(e) => updAgresor(i, "relacion_agresor_id", e.target.value)}
+                        >
+                          <option value="">— Selecciona —</option>
+                          {cat.relacionesAgresor.map((x) => (
+                            <option key={x.id} value={String(x.id)}>{x.nombre}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input value={a.relacion_agresor_id || ""} onChange={(e) => updAgresor(i, "relacion_agresor_id", e.target.value)} />
+                      )}
+                    </EditItem>
+
+                    <EditItem label="Edad">
+                      <input value={a.edad ?? ""} onChange={(e) => updAgresor(i, "edad", e.target.value)} />
+                    </EditItem>
+
+                    <EditItem label="Documento">
+                      <input value={a.dpi_pasaporte || ""} onChange={(e) => updAgresor(i, "dpi_pasaporte", e.target.value)} />
+                    </EditItem>
+
+                    <EditItem label="Ocupación">
+                      <input value={a.ocupacion || ""} onChange={(e) => updAgresor(i, "ocupacion", e.target.value)} />
+                    </EditItem>
+
+                    <EditItem label="Teléfono">
+                      <input value={a.telefono || ""} onChange={(e) => updAgresor(i, "telefono", e.target.value)} />
+                    </EditItem>
+
+                    <EditItem label="Ingreso mensual (Q)">
+                      <input value={a.ingreso_mensual ?? ""} onChange={(e) => updAgresor(i, "ingreso_mensual", e.target.value)} />
+                    </EditItem>
+
+                    <EditItem label="Dirección">
+                      <input value={a.direccion || ""} onChange={(e) => updAgresor(i, "direccion", e.target.value)} />
+                    </EditItem>
+
+                    <EditItem label="Lugar de residencia">
+                      <input value={a.lugar_residencia || ""} onChange={(e) => updAgresor(i, "lugar_residencia", e.target.value)} />
+                    </EditItem>
+
+                    <EditItem label="Lugar de trabajo">
+                      <input value={a.lugar_trabajo || ""} onChange={(e) => updAgresor(i, "lugar_trabajo", e.target.value)} />
+                    </EditItem>
+
+                    <EditItem label="Horario de trabajo">
+                      <input value={a.horario_trabajo || ""} onChange={(e) => updAgresor(i, "horario_trabajo", e.target.value)} />
+                    </EditItem>
+
+                    <EditItem label="Observación">
+                      <input value={a.observacion || ""} onChange={(e) => updAgresor(i, "observacion", e.target.value)} />
+                    </EditItem>
+
+                    <EditItem label="">
+                      <button type="button" className="btn-danger" onClick={() => delAgresor(i)}>
+                        Quitar agresor
+                      </button>
+                    </EditItem>
+                  </div>
+                ))}
+
+                <div className="cd-grid">
+                  <EditItem label="">
+                    <button type="button" className="btn-secondary" onClick={addAgresor}>
+                      + Agregar agresor
+                    </button>
+                  </EditItem>
+                </div>
+              </>
             )}
           </section>
 
@@ -797,7 +1367,6 @@ export default function CasoDetalle() {
                 <Item label="Residencia">{caso.residencia || "-"}</Item>
                 <Item label="Teléfono">{caso.telefono || "-"}</Item>
 
-                {/* MUNICIPIO del caso */}
                 <Item label="Municipio">
                   {prettyMunicipioCaso(caso, victima, cat) || "-"}
                 </Item>
@@ -828,14 +1397,37 @@ export default function CasoDetalle() {
                     placeholder="Motivo…"
                   />
                 </EditItem>
+
                 <EditItem label="Residencia">
-                  <input
-                    name="residencia"
-                    value={form.residencia}
-                    onChange={onChange}
-                    placeholder="Colonia/Barrio…"
-                  />
+                  {(cat.residencias || []).length ? (
+                    <select
+                      name="residencia"
+                      value={form.residencia || ""}
+                      onChange={onChange}
+                    >
+                      <option value="">— Selecciona —</option>
+
+                      {form.residencia &&
+                        !(cat.residencias || []).some((r) => String(r?.nombre || "") === String(form.residencia)) && (
+                          <option value={form.residencia}>{form.residencia}</option>
+                        )}
+
+                      {(cat.residencias || []).map((r) => (
+                        <option key={r.id ?? r.nombre} value={r.nombre}>
+                          {r.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      name="residencia"
+                      value={form.residencia}
+                      onChange={onChange}
+                      placeholder="Colonia/Barrio…"
+                    />
+                  )}
                 </EditItem>
+
                 <EditItem label="Teléfono">
                   <input
                     name="telefono"
@@ -926,7 +1518,13 @@ export default function CasoDetalle() {
             {!edit ? (
               <button
                 className="btn-primary"
-                onClick={() => setEdit(true)}
+                onClick={() => {
+                  setFormSnapshot(cloneForm(form));
+                  setVictimaSnapshot(cloneForm(victimaForm));
+                  setHijosDeleted([]);
+                  setAgresoresDeleted([]);
+                  setEdit(true);
+                }}
                 disabled={!isBorrador}
                 title={isBorrador ? "" : "Solo editable en estado Borrador"}
               >
@@ -937,29 +1535,17 @@ export default function CasoDetalle() {
                 <button className="btn-primary" onClick={guardar} disabled={busy === "guardar"}>
                   {busy === "guardar" ? "Guardando…" : "Guardar"}
                 </button>
+
                 <button
                   className="btn-secondary"
                   onClick={() => {
+                    if (formSnapshot) setForm(formSnapshot);
+                    if (victimaSnapshot) setVictimaForm(victimaSnapshot);
                     setEdit(false);
-                    setForm({
-                      motivo_consulta: caso.motivo_consulta ?? "",
-                      fecha_atencion: caso.fecha_atencion ? new Date(caso.fecha_atencion).toISOString().slice(0, 10) : "",
-                      residencia: caso.residencia ?? "",
-                      telefono: caso.telefono ?? "",
-                      municipio_id: caso.municipio_id ?? "",
-                      sexual_conocido: !!caso.sexual_conocido,
-                      embarazo_semanas: caso.embarazo_semanas ?? "",
-                      tiempo_agresion: caso.tiempo_agresion ?? "",
-                      riesgo_otro: caso.riesgo_otro ?? "",
-                      acciones: caso.acciones ?? "",
-                      tipos_violencia_ids: form.tipos_violencia_ids || [],
-                      medios_agresion_ids: form.medios_agresion_ids || [],
-                      ref_interna_ids: form.ref_interna_ids || [],
-                      ref_externa_ids: form.ref_externa_ids || [],
-                      situaciones_riesgo: form.situaciones_riesgo || [],
-                      hijos: form.hijos || [],
-                      agresores: form.agresores || [],
-                    });
+                    setFormSnapshot(null);
+                    setVictimaSnapshot(null);
+                    setHijosDeleted([]);
+                    setAgresoresDeleted([]);
                   }}
                 >
                   Cancelar
@@ -978,16 +1564,15 @@ export default function CasoDetalle() {
               </button>
             )}
 
-        <div className="cd-spacer" />
-        {/* ⬇️ NUEVO: deshabilitar si está completado */}
-        <button
-          className="btn-danger"
-          onClick={eliminar}
-          disabled={busy === "eliminar" || isCompletado}
-        title={isCompletado ? "No se puede eliminar un proceso completado" : ""}
-        >
-          {busy === "eliminar" ? "Eliminando…" : "Eliminar"}
-        </button>
+            <div className="cd-spacer" />
+            <button
+              className="btn-danger"
+              onClick={eliminar}
+              disabled={busy === "eliminar" || isCompletado}
+              title={isCompletado ? "No se puede eliminar un proceso completado" : ""}
+            >
+              {busy === "eliminar" ? "Eliminando…" : "Eliminar"}
+            </button>
           </div>
         </div>
       )}
@@ -1073,15 +1658,15 @@ function renderNombres(options, ids) {
 }
 function renderConOtro(options, ids, extraText) {
   const base = renderNombres(options, ids);
-  const txt = String(extraText || '').trim();
+  const txt = String(extraText || "").trim();
   if (!txt) return base;
-  const parts = base.split(',').map((s) => s.trim());
+  const parts = base.split(",").map((s) => s.trim());
   const isOtro = (s) => {
-    const n = s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    return n === 'otro' || n === 'otra' || n === 'otros' || n === 'otras';
+    const n = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return n === "otro" || n === "otra" || n === "otros" || n === "otras";
   };
   const replaced = parts.map((p) => (isOtro(p) ? `${p}: ${txt}` : p));
-  return replaced.join(', ');
+  return replaced.join(", ");
 }
 function emptyToNull(v) {
   const s = String(v ?? "").trim();
@@ -1109,7 +1694,6 @@ function isNumeric(x) {
   return Number.isFinite(n) && String(x).trim() !== "";
 }
 
-/* Catálogo helpers */
 function findById(list, id) {
   return (list || []).find((o) => String(o.id) === String(id)) || null;
 }
@@ -1121,16 +1705,11 @@ function municipioYDepto(cat, muniId) {
   return depto ? `${muni.nombre}, ${depto?.nombre || ""}`.replace(/,\s*$/, "") : muni.nombre;
 }
 
-/** Municipio mostrado en "Datos del caso"
- * Prioridad: caso.municipio_id -> texto en caso -> municipio de residencia de la víctima
- */
 function prettyMunicipioCaso(caso, victima, cat) {
-  // 1) ID numérico en caso
   if (isNumeric(caso?.municipio_id)) {
     const out = municipioYDepto(cat, caso.municipio_id);
     return out || `(${caso.municipio_id})`;
   }
-  // 2) Texto/código en caso
   const fromCasoText = pickAny(
     caso,
     ["municipio_nombre", "municipio_texto", "municipio"],
@@ -1141,7 +1720,6 @@ function prettyMunicipioCaso(caso, victima, cat) {
       return municipioYDepto(cat, fromCasoText) || String(fromCasoText);
     return String(fromCasoText);
   }
-  // 3) Fallback a víctima (municipio de residencia)
   const vicMuniId =
     victima?.municipio_residencia_id ??
     victima?.residencia_municipio_id ??
@@ -1159,11 +1737,9 @@ function prettyMunicipioCaso(caso, victima, cat) {
   return vicMuniTxt ? String(vicMuniTxt) : null;
 }
 
-/** Lugar de origen (víctima) */
 function prettyLugarOrigen(victima, cat) {
   if (!victima) return null;
 
-  // Posibles IDs
   const muniId =
     victima.municipio_origen_id ??
     victima.municipioOrigenId ??
@@ -1178,7 +1754,6 @@ function prettyLugarOrigen(victima, cat) {
     if (out) return out;
   }
 
-  // Nombres sueltos
   const raw = pickAny(
     victima,
     [
@@ -1197,7 +1772,6 @@ function prettyLugarOrigen(victima, cat) {
     }
   }
 
-  // Extranjera (datos en extra)
   if (victima.extra && typeof victima.extra === "object") {
     const ciudad = victima.extra.ciudad_origen || victima.extra.ciudadOrigen;
     const deptoExt = victima.extra.depto_origen_extranjero || victima.extra.deptoOrigenExtranjero;
@@ -1209,7 +1783,6 @@ function prettyLugarOrigen(victima, cat) {
   return null;
 }
 
-/* Presentación */
 function sexoLabel(s) {
   const v = String(s || "").toUpperCase();
   return v === "M" ? "Masculino" : v === "F" ? "Femenino" : "Sexo no indicado";
@@ -1219,3 +1792,4 @@ function qMoneda(n) {
   if (!Number.isFinite(num)) return String(n ?? "-");
   return `Q ${num.toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
+

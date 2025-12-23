@@ -9,17 +9,17 @@ function inferAreaFromPath(pathname = "") {
   const p = String(pathname || "").toLowerCase();
   if (p.includes("/medica")) return "medica";
   if (p.includes("/social")) return "social";
-  if (p.includes("/legal")) return "legal";
   if (p.includes("/psicologica")) return "psicologica";
+  if (p.includes("/legal")) return "legal";
   if (p.includes("/albergue")) return "albergue";
   return null;
 }
 function normalizeAreaSlug(area) {
-  if (area == null) return "social";
+  if (area == null) return "psicologica";
   const s = String(area).trim().toLowerCase();
   if (/^\d+$/.test(s)) {
     const n = parseInt(s, 10);
-    return ({ 1: "social", 2: "legal", 3: "medica", 4: "psicologica", 5: "albergue" }[n]) || "social";
+    return ({ 1: "social", 2: "legal", 3: "medica", 4: "psicologica", 5: "albergue" }[n]) || "psicologica";
   }
   const map = {
     social: "social", s: "social", soc: "social",
@@ -28,7 +28,7 @@ function normalizeAreaSlug(area) {
     psicologica: "psicologica", "psicológica": "psicologica", psi: "psicologica", p: "psicologica",
     albergue: "albergue", a: "albergue",
   };
-  return map[s] || "social";
+  return map[s] || "psicologica";
 }
 
 // Usa el endpoint del backend filtrado por el área del usuario (JWT) y/o la ruta
@@ -59,9 +59,8 @@ function VictimasLista() {
   const [notasDev, setNotasDev] = useState({});
   const [modal, setModal] = useState({ open:false, texto:"", victimaId:null });
 
-  // ====== FORZAR ÁREA PSICOLÓGICA ======
+  // ====== FORZAR AREA PSICOLOGICA ======
   const FORCED_AREA = "psicologica";
-  const areaFromToken = useMemo(() => getAreaFromToken(), []);
   const areaForQuery = FORCED_AREA;
   const areaSlug = FORCED_AREA;
   const areaBase = `/${FORCED_AREA}`;
@@ -78,11 +77,13 @@ function VictimasLista() {
         const lista = Array.isArray(data?.data) ? data.data : [];
         if (!alive) return;
         setVictimas(lista);
+
         try {
           const respCasos = await api.get(`/casos`).catch(() => ({ data: [] }));
           const listaCasos = Array.isArray(respCasos?.data) ? respCasos.data : [];
           const mapActivos = {};
           const mapBorradores = {};
+
           for (const c of listaCasos) {
             const vId = c?.victima_id;
             if (!vId) continue;
@@ -96,6 +97,7 @@ function VictimasLista() {
             const cur = mapActivos[vId];
             const esAbierto = estado !== "completado";
             const curEsAbierto = cur && String(cur.estado || "").toLowerCase() !== "completado";
+
             if (!cur) {
               mapActivos[vId] = { id: c.id, estado };
             } else if (esAbierto && !curEsAbierto) {
@@ -104,68 +106,16 @@ function VictimasLista() {
               mapActivos[vId] = { id: c.id, estado };
             }
           }
+
           setActivos(mapActivos);
           setBorradores(mapBorradores);
+
           try { await cargarNotasDevolucion(mapBorradores); } catch {}
         } catch {}
       } catch (err) {
         const msg = err?.response?.data?.error || "No se pudieron cargar las sobrevivientes";
         setError(msg);
         console.error("Error al obtener las sobrevivientes:", err);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-
-    return () => { alive = false; };
-  }, [mostrar, q, areaForQuery]);
-
-  useEffect(() => {
-    if (!mostrar) return;
-
-    let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const { data } = await getVictimasOperativa({ q, areaHint: areaForQuery });
-        const lista = Array.isArray(data?.data) ? data.data : [];
-        if (!alive) return;
-        setVictimas(lista);
-
-        try {
-          const respCasos = await api.get(`/casos`).catch(() => ({ data: [] }));
-          const listaCasos = Array.isArray(respCasos?.data) ? respCasos.data : [];
-          const mapActivos = {};
-          const mapBorradores = {};
-          for (const c of listaCasos) {
-            const vId = c?.victima_id;
-            if (!vId) continue;
-            const estado = String(c?.estado || "").toLowerCase();
-
-            if (estado === 'borrador') {
-              const prev = mapBorradores[vId];
-              if (!prev || Number(c.id) > Number(prev)) mapBorradores[vId] = c.id;
-            }
-
-            const cur = mapActivos[vId];
-            const esAbierto = estado !== "completado";
-            const curEsAbierto = cur && String(cur.estado || "").toLowerCase() !== "completado";
-            if (!cur) {
-              mapActivos[vId] = { id: c.id, estado };
-            } else if (esAbierto && !curEsAbierto) {
-              mapActivos[vId] = { id: c.id, estado };
-            } else if (Number(c.id) > Number(cur.id)) {
-              mapActivos[vId] = { id: c.id, estado };
-            }
-          }
-          setActivos(mapActivos);
-          setBorradores(mapBorradores);
-        } catch {}
-      } catch (err) {
-        const msg = err?.response?.data?.error || "No se pudieron cargar las sobrevivientes";
-        setError(msg);
       } finally {
         if (alive) setLoading(false);
       }
@@ -186,11 +136,6 @@ function VictimasLista() {
     try { sessionStorage.setItem('vl_q', q || ''); } catch {}
   }, [q]);
 
-  const copiarId = (id) => {
-    navigator.clipboard?.writeText(String(id));
-    alert(`Copiado: ${id}`);
-  };
-
   const irACrearONavegar = async (victima_id) => {
     if (!victima_id) return;
     setBusyId(victima_id);
@@ -201,6 +146,7 @@ function VictimasLista() {
         navigate(`${areaBase}/casos/${activo.id}`);
         return;
       }
+
       const borrId = borradores[victima_id] ?? null;
 
       if (borrId) {
@@ -287,31 +233,35 @@ function VictimasLista() {
               <th>Acciones</th>
             </tr>
           </thead>
+
           <tbody>
             {filtradas.length > 0 ? (
               filtradas.map((v, idx) => {
-                const nombre =
-                  v.nombre ||
-                  [v.primer_nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido]
-                    .filter(Boolean)
-                    .join(" ");
+                const nombre = nombreCompletoVictima(v);
                 const idVictima = v.id ?? idx;
+
                 const borrId = borradores[v.id];
                 const activo = (activos || {})[v.id];
                 const estadoActivo = String(activo?.estado || "").toLowerCase();
+
+                // ✅ (3) Mostrar estado BORRADOR cuando aplique (sin tocar tu lógica)
+                const tieneBorrador = Boolean(borrId) || (activo?.id && estadoActivo === "borrador");
 
                 return (
                   <tr key={idVictima}>
                     <td>{v.id}</td>
                     <td>{nombre || "-"}</td>
                     <td>{v.telefono || "-"}</td>
-                    <td>{v.correo_electronico || v.email || v.correo || "-"}</td>
-                    <td className="acciones-cell">
-                      <button className="btn" onClick={() => copiarId(v.id)}>
-                        Copiar ID
-                      </button>
 
-                      {/* Si existe caso (aunque esté completado), mostrar "Ver proceso" */}
+                    <td className="acciones-cell">
+                      {/* ✅ (3) Badge borrador visible */}
+                      {tieneBorrador && (
+                        <span className="badge dot borrador" style={{ marginRight: 8 }}>
+                          {prettyEstado("borrador")}
+                        </span>
+                      )}
+
+                      {/* Si existe caso (y no es borrador), mostrar "Ver proceso" */}
                       {activo?.id && estadoActivo !== 'borrador' && (
                         <>
                           <span className={`badge dot ${estadoActivo}`} style={{ marginRight:8 }}>
@@ -321,14 +271,14 @@ function VictimasLista() {
                             className="btn-crear"
                             onClick={() => irACrearONavegar(v.id)}
                             disabled={busyId === v.id}
-                            title={`Abrir proceso #${activo.id}`}
+                            title={`Abrir proceso #${activo.id} — para: ${nombre}`}
                           >
                             {busyId === v.id ? 'Abriendo.' : 'Ver proceso'}
                           </button>
                         </>
                       )}
 
-                      {/* Si NO hay proceso (o el “activo” es solo borrador) => Ver borrador / Crear nuevo */}
+                      {/* Si NO hay proceso (o el “activo” es solo borrador) => Ver borrador / Crear proceso */}
                       <button
                         className="btn-crear"
                         style={{ display: (activo?.id && estadoActivo !== 'borrador') ? 'none' : undefined }}
@@ -336,27 +286,31 @@ function VictimasLista() {
                         disabled={busyId === v.id}
                         title={
                           borrId
-                            ? `Abrir borrador #${borrId}`
-                            : areaSlug
-                            ? `Crear proceso (área ${areaSlug})`
-                            : "Crear proceso"
+                            ? `Abrir borrador #${borrId} — para: ${nombre}`
+                            : `Crear proceso — para: ${nombre}`
                         }
                       >
                         {busyId === v.id
                           ? "Abriendo…"
                           : borrId
                           ? "Ver borrador"
-                          : "Crear nuevo proceso"}
+                          : "Crear proceso"}
                       </button>
 
                       {borrId && (notasDev[v.id] || '').trim() && (
-                        <button className="btn" onClick={() => setModal({ open:true, texto:notasDev[v.id], victimaId:v.id })} title="Ver motivo de devolucion">
+                        <button
+                          className="btn"
+                          onClick={() => setModal({ open:true, texto:notasDev[v.id], victimaId:v.id })}
+                          title="Ver motivo de devolución"
+                        >
                           Motivo de devolución
                         </button>
                       )}
+
                       {borrId && (notasDev[v.id] || '').trim() && (
                         <div className="muted" style={{ marginTop: 6, maxWidth: 360 }} title={notasDev[v.id]}>
-                          Motivo devolucion: {String(notasDev[v.id]).slice(0, 120)}{String(notasDev[v.id]).length > 120 ? '…' : ''}
+                          Motivo devolución: {String(notasDev[v.id]).slice(0, 120)}
+                          {String(notasDev[v.id]).length > 120 ? '…' : ''}
                         </div>
                       )}
                     </td>
@@ -365,7 +319,7 @@ function VictimasLista() {
               })
             ) : (
               <tr>
-                <td colSpan="5">No hay datos disponibles</td>
+                <td colSpan="4">No hay datos disponibles</td>
               </tr>
             )}
           </tbody>
@@ -412,4 +366,44 @@ function prettyEstado(s){
   return m[k] || s || '-';
 }
 
+/**
+ * Nombre completo robusto:
+ * - Usa campos directos si existen.
+ * - Si no, arma desde nombres/apellidos clásicos.
+ */
+function nombreCompletoVictima(v) {
+  if (!v) return "-";
+
+  const directo =
+    v.nombre_completo ||
+    v.nombreCompleto ||
+    v.full_name ||
+    v.nombre_full;
+
+  if (directo && String(directo).trim()) return String(directo).trim();
+
+  const estructurado = [
+    v.primer_nombre,
+    v.segundo_nombre,
+    v.tercer_nombre,
+    v.primer_apellido,
+    v.segundo_apellido,
+  ]
+    .filter(Boolean)
+    .map((x) => String(x).trim())
+    .filter(Boolean);
+
+  if (estructurado.length) return estructurado.join(" ").replace(/\s+/g, " ").trim();
+
+  const simple = [v.nombre, v.apellido]
+    .filter(Boolean)
+    .map((x) => String(x).trim())
+    .filter(Boolean);
+
+  if (simple.length) return simple.join(" ").replace(/\s+/g, " ").trim();
+
+  return "-";
+}
+
 export default VictimasLista;
+

@@ -1,4 +1,3 @@
-// src/medica/MedicaHomeOperativo.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, NavLink, Link } from 'react-router-dom';
 import api, { setToken } from "../servicios/Servicios";
@@ -6,6 +5,8 @@ import './MedicaHomeOperativo.css';
 
 function MedicaHome() {
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 1024 : false));
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // ======= Estado de casos (dashboard) =======
   const [casos, setCasos] = useState([]);
@@ -27,11 +28,18 @@ function MedicaHome() {
     cerrados: 0,
     total: 0,
   });
+
   // Notas de devolución para casos en borrador (id -> texto)
   const [notasDev, setNotasDev] = useState({});
 
+  // ✅ Devoluciones pendientes por evento (NO por caso)
+  const [devolPend, setDevolPend] = useState([]); // [{casoId, detalle, key}]
+
+  // ✅ Bandeja de notificaciones (campanita)
+  const [notifOpen, setNotifOpen] = useState(false);
+
   // ======= Form Registrar sobreviviente (ampliado) =======
-  const [cat, setCat] = useState({ estados: [], escolaridades: [], etnias: [] });
+  const [cat, setCat] = useState({ estados: [], escolaridades: [], etnias: [], residencias: [], ocupaciones: [] });
 
   const [vForm, setVForm] = useState({
     nombres: '',
@@ -49,9 +57,13 @@ function MedicaHome() {
     nacionalidad: '',
     lugar_origen: '',
   });
+
   const [creandoVictima, setCreandoVictima] = useState(false);
   const [victimaId, setVictimaId] = useState(null);
+  const [victimaNombre, setVictimaNombre] = useState('');
   const [msgVictima, setMsgVictima] = useState('');
+
+  const [victimasLookup, setVictimasLookup] = useState([]);
 
   // Fecha legible en topbar
   const hoy = useMemo(
@@ -59,8 +71,47 @@ function MedicaHome() {
     []
   );
 
+  // mapa id -> nombre (para mostrar nombre en la tabla de casos)
+  const victimasById = useMemo(() => {
+    const m = {};
+    (victimasLookup || []).forEach(v => {
+      const nombre = buildNombreVictima(v);
+      if (v?.id != null) m[String(v.id)] = nombre || `ID #${v.id}`;
+    });
+    return m;
+  }, [victimasLookup]);
+
+  // ======= Responsive sidebar =======
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = typeof window !== 'undefined' ? window.innerWidth <= 1024 : false;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // ======= Efectos: cargar casos + catálogos =======
-  useEffect(() => { fetchCasos(); fetchCatalogos(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { fetchCasos(); fetchCatalogos(); fetchVictimasLookup(); /* eslint-disable-next-line */ }, []);
+
+  // ✅ refrescar al volver a la pestaña/ventana (para que aparezcan devoluciones nuevas sin “recargar manual”)
+  useEffect(() => {
+    const onFocus = () => { try { fetchCasos(); } catch {} };
+    const onVis = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        try { fetchCasos(); } catch {}
+      }
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+    // eslint-disable-next-line
+  }, []);
 
   async function fetchCasos() {
     setLoading(true);
@@ -89,50 +140,297 @@ function MedicaHome() {
     }
   }
 
-  // Carga la última nota de devolución desde el historial para los casos en borrador
-  async function cargarNotasDevolucion(lista) {
-    const ids = (lista || []).filter(c => norm(c.estado) === 'borrador').map(c => c.id);
-    if (!ids.length) { setNotasDev({}); return; }
-    const pairs = await Promise.all(ids.map(async (id) => {
-      try {
-        const { data } = await api.get(`/casos/${id}/historial`);
-        const hist = Array.isArray(data) ? data : [];
-        const dev = [...hist].reverse().find(h =>
-          String(h?.estado_hasta || '').toLowerCase() === 'borrador'
-        );
-        const detalle = (dev?.detalle || '').toString().trim();
-        return [id, detalle];
-      } catch { return [id, '']; }
-    }));
-    setNotasDev(Object.fromEntries(pairs));
-  }
-
-  async function fetchCatalogos() {
+  async function fetchVictimasLookup() {
     try {
-      const [ec, es, et] = await Promise.all([
-        api.get('/catalogos/estados-civiles'),
-        api.get('/catalogos/escolaridades'),
-        api.get('/catalogos/etnias'),
-      ]);
-      setCat({
-        estados: Array.isArray(ec.data) ? ec.data : [],
-        escolaridades: Array.isArray(es.data) ? es.data : [],
-        etnias: Array.isArray(et.data) ? et.data : [],
-      });
+      const { data } = await api.get('/victimas');
+      setVictimasLookup(Array.isArray(data) ? data : []);
     } catch {
-      // si falla, el formulario sigue funcionando con campos de texto
+      setVictimasLookup([]);
     }
   }
+
+  // ✅ Ocupación: modo lista vs modo texto ("Agregar nueva")
+  const [ocupacionCustom, setOcupacionCustom] = useState(false);
+
+  // Normaliza para comparar sin duplicados: "Médica" == "medica" == "Medica"
+  function ocupacionKey(s = '') {
+    return String(s || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')   // quita acentos
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')       // símbolos -> espacio
+      .trim()
+      .replace(/\s+/g, ' ');
+  }
+
+  // ===== Alertas de devolución: "seen" por evento (no global) =====
+  const LS_DEV_SEEN = 'anh_dev_seen_keys_v1';
+
+  function loadDevSeenSet() {
+    try {
+      const raw = localStorage.getItem(LS_DEV_SEEN);
+      const arr = raw ? JSON.parse(raw) : [];
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  function saveDevSeenSet(set) {
+    try {
+      const arr = Array.from(set).slice(-500);
+      localStorage.setItem(LS_DEV_SEEN, JSON.stringify(arr));
+    } catch {}
+  }
+
+  function simpleHash(str = '') {
+    const s = String(str || '');
+    let h = 0;
+    for (let i = 0; i < s.length; i++) {
+      h = ((h << 5) - h) + s.charCodeAt(i);
+      h |= 0; // 32-bit
+    }
+    return Math.abs(h).toString(36);
+  }
+
+  // ✅ Key más estable y único (incluye índice del historial como fallback)
+  function buildDevEventKey(casoId, histItem, histIndex) {
+    const hid =
+      histItem?.id ??
+      histItem?.historial_id ??
+      histItem?.id_historial ??
+      null;
+
+    const ts =
+      histItem?.created_at ??
+      histItem?.fecha_creacion ??
+      histItem?.fecha ??
+      histItem?.timestamp ??
+      null;
+
+    const det = (histItem?.detalle || '').toString().trim();
+    const detHash = det ? simpleHash(det) : '0';
+    const idx = (typeof histIndex === 'number' && histIndex >= 0) ? histIndex : null;
+
+    if (hid != null) return `caso:${casoId}|hist:${hid}`;
+    if (ts && idx != null) return `caso:${casoId}|ts:${String(ts)}|i:${idx}|h:${detHash}`;
+    if (ts) return `caso:${casoId}|ts:${String(ts)}|h:${detHash}`;
+    if (idx != null) return `caso:${casoId}|i:${idx}|h:${detHash}`;
+    return `caso:${casoId}|fallback:h:${detHash}`; // estable (sin Date.now)
+  }
+
+  function marcarDevolucionesComoVistas(keys = []) {
+    if (!keys.length) return;
+    const seen = loadDevSeenSet();
+    keys.forEach(k => seen.add(k));
+    saveDevSeenSet(seen);
+    setDevolPend(prev => prev.filter(x => !keys.includes(x.key)));
+  }
+
+  function onEntendidoDevolucion() {
+    marcarDevolucionesComoVistas(devolPend.map(d => d.key));
+    setNotifOpen(false);
+  }
+
+  function abrirDevolucionItem(item) {
+    if (!item?.key) return;
+    marcarDevolucionesComoVistas([item.key]);
+    setNotifOpen(false);
+    navigate(`/medica/casos/${item.casoId}`);
+  }
+
+  function marcarUnaDevolucion(item) {
+    if (!item?.key) return;
+    marcarDevolucionesComoVistas([item.key]);
+  }
+
+  function verBandeja() {
+    setNotifOpen(true);
+    // si está cerrado el sidebar en móvil, no lo tocamos (solo abrimos bandeja)
+  }
+
+  // Carga la última nota de devolución desde el historial (solo casos en borrador)
+// Carga la última nota de devolución desde el historial (solo casos en borrador)
+async function cargarNotasDevolucion(lista) {
+  const ids = (lista || []).filter(c => norm(c.estado) === 'borrador').map(c => c.id);
+  if (!ids.length) {
+    setNotasDev({});
+    setDevolPend([]);
+    return;
+  }
+
+  const seen = loadDevSeenSet();
+
+  // ✅ Solo consideramos "devolución" cuando realmente viene de coordinación / revisión
+  function isDevolucionCoordinacion(histItem) {
+    const hasta = norm(histItem?.estado_hasta);
+    if (hasta !== 'borrador') return false;
+
+    const desde = norm(
+      histItem?.estado_desde ??
+      histItem?.estado_antes ??
+      histItem?.estado_anterior ??
+      histItem?.estado_prev ??
+      histItem?.estado_previo ??
+      ''
+    );
+
+    // Normalizamos texto sin acentos (reusamos tu normalizador robusto)
+    const detalleK = ocupacionKey(histItem?.detalle || '');
+
+    const rolLike =
+      histItem?.usuario_rol ??
+      histItem?.rol ??
+      histItem?.role ??
+      histItem?.perfil ??
+      histItem?.actor_rol ??
+      histItem?.usuario?.rol ??
+      '';
+
+    const rolK = ocupacionKey(rolLike);
+
+    const accionLike =
+      histItem?.accion ??
+      histItem?.tipo ??
+      histItem?.evento ??
+      histItem?.motivo ??
+      '';
+
+    const accionK = ocupacionKey(accionLike);
+
+    // Pistas típicas de devolución / coordinación
+    const coordHint =
+      rolK.includes('coordinacion') ||
+      detalleK.includes('coordinacion') ||
+      accionK.includes('coordinacion');
+
+    const devolHint =
+      detalleK.includes('devolu') ||     // devolucion / devuelto / devolver…
+      accionK.includes('devolu');
+
+    // Lo más común: se devuelve a borrador desde enviado/validado
+    const fromReview = (desde === 'enviado' || desde === 'validado');
+
+    return fromReview || coordHint || devolHint;
+  }
+
+  const results = await Promise.all(ids.map(async (id) => {
+    try {
+      const { data } = await api.get(`/casos/${id}/historial`);
+      const hist = Array.isArray(data) ? data : [];
+
+      // ✅ “Devolución” = última entrada marcada por backend como devolución de coordinación
+let devIndex = -1;
+for (let i = hist.length - 1; i >= 0; i--) {
+  if (hist?.[i]?.es_devolucion_coordinacion === true) {
+    devIndex = i;
+    break;
+  }
+}
+
+      const dev = devIndex >= 0 ? hist[devIndex] : null;
+      const detalle = (dev?.detalle || '').toString().trim();
+      const key = dev ? buildDevEventKey(id, dev, devIndex) : null;
+
+      return { id, detalle, key };
+    } catch {
+      return { id, detalle: '', key: null };
+    }
+  }));
+
+  // notas para la tabla (id -> texto)
+  const notasMap = {};
+  for (const r of results) notasMap[r.id] = r.detalle || '';
+  setNotasDev(notasMap);
+
+  // devoluciones pendientes (solo las no vistas y con nota)
+  const pendientes = results
+    .filter(r => (r.detalle || '').trim() && r.key && !seen.has(r.key))
+    .map(r => ({ casoId: r.id, detalle: r.detalle, key: r.key }));
+
+  setDevolPend(pendientes);
+}
+
+
+async function fetchCatalogos() {
+  try {
+    const [ec, es, et, rc, oc] = await Promise.all([
+      api.get('/catalogos/estados-civiles'),
+      api.get('/catalogos/escolaridades'),
+      api.get('/catalogos/etnias'),
+      api.get('/catalogos/residencias').catch(() => ({ data: [] })),
+      api.get('/catalogos/ocupaciones').catch(() => ({ data: [] })),
+    ]);
+
+    // ---- Normalizadores seguros (NO rompen si el backend cambia forma) ----
+    const toArray = (x) => {
+      if (Array.isArray(x)) return x;
+      if (Array.isArray(x?.data)) return x.data;
+      if (Array.isArray(x?.items)) return x.items;
+      if (Array.isArray(x?.results)) return x.results;
+      return [];
+    };
+
+    const normText = (v) => String(v ?? '').trim();
+
+    const ocupacionesRaw = toArray(oc?.data ?? oc);
+    const ocupacionesNorm = ocupacionesRaw
+      .map((o) => {
+        const nombre =
+          normText(o?.nombre) ||
+          normText(o?.ocupacion) ||
+          normText(o?.actividad) ||
+          normText(o?.descripcion) ||
+          normText(o?.label);
+
+        const id =
+          o?.id ??
+          o?.codigo ??
+          o?.clave ??
+          o?.ocupacion_id ??
+          o?.actividad_id ??
+          nombre; // fallback estable si no hay id
+
+        return nombre ? { id, nombre } : null;
+      })
+      .filter(Boolean);
+
+    setCat({
+      estados: Array.isArray(ec.data) ? ec.data : [],
+      escolaridades: Array.isArray(es.data) ? es.data : [],
+      etnias: Array.isArray(et.data) ? et.data : [],
+      residencias: Array.isArray(rc.data) ? rc.data : [],
+      ocupaciones: ocupacionesNorm, // ✅ aquí está el fix
+    });
+  } catch {
+    // no rompas nada
+  }
+}
+
 
   // ======= Crear caso rápido (ya existe) =======
   async function crearCasoRapido(e) {
     e.preventDefault();
     setMsg('');
+
     try {
+      const raw = String(nuevo.victima_id || '').trim();
+      let victimaIdResolved = Number(raw);
+
+      if (!Number.isFinite(victimaIdResolved) || victimaIdResolved <= 0) {
+        const found = resolveVictimaByName(raw, victimasLookup);
+        if (!found?.id) {
+          setMsg('No se encontró una sobreviviente con ese nombre. Ve a “Sobrevivientes” y copia el ID o escribe el nombre completo.');
+          return;
+        }
+        victimaIdResolved = Number(found.id);
+      }
+
       const payload = {
-        victima_id: Number(nuevo.victima_id),
+        victima_id: Number(victimaIdResolved),
         area_id: Number(nuevo.area_id),
       };
+
       const resp = await api.post('/casos', payload, { headers: { 'Content-Type': 'application/json' } });
       const id = resp?.data?.id;
       if (id) {
@@ -146,7 +444,7 @@ function MedicaHome() {
     }
   }
 
-  // ======= Registrar víctima (ampliado) =======
+  // ======= Registrar sobreviviente (ampliado) =======
   function onVictimaChange(e) {
     const { name, value } = e.target;
     setVForm(f => ({ ...f, [name]: value }));
@@ -158,6 +456,7 @@ function MedicaHome() {
 
     setMsgVictima('');
     setVictimaId(null);
+    setVictimaNombre('');
 
     if (!vForm.nombres.trim() || !vForm.apellidos.trim()) {
       setMsgVictima('Ingresa nombres y apellidos.');
@@ -167,10 +466,19 @@ function MedicaHome() {
     const { pn, sn, pa, sa } = splitNombre(vForm.nombres, vForm.apellidos);
     const nombreCompleto = [vForm.nombres.trim(), vForm.apellidos.trim()].filter(Boolean).join(' ');
 
+    // ✅ Si está en modo "Agregar nueva", no permitir duplicados (Medica/Médica/medica)
+    if (ocupacionCustom && String(vForm.ocupacion || '').trim()) {
+      const key = ocupacionKey(vForm.ocupacion);
+      const dup = (cat.ocupaciones || []).some(o => ocupacionKey(o?.nombre) === key);
+      if (dup) {
+        setMsgVictima('Esa ocupación ya existe en la lista. Selecciónala del desplegable (no la dupliquemos 😄).');
+        return;
+      }
+    }
+
     setCreandoVictima(true);
     try {
       const payload = {
-        // mapeo a columnas reales (tu backend también acepta alias, pero mapeamos claro)
         primer_nombre: pn,
         segundo_nombre: sn || null,
         primer_apellido: pa,
@@ -191,7 +499,7 @@ function MedicaHome() {
         residencia: emptyToNull(vForm.residencia),
         nacionalidad: emptyToNull(vForm.nacionalidad),
         lugar_origen: emptyToNull(vForm.lugar_origen),
-        // Alias para compatibilidad con columnas alternativas
+
         direccion_domicilio: emptyToNull(vForm.direccion),
         residencia_domicilio: emptyToNull(vForm.residencia),
         barrio_colonia: emptyToNull(vForm.residencia),
@@ -204,7 +512,10 @@ function MedicaHome() {
 
       const id = data?.id;
       setVictimaId(id || null);
-      setMsgVictima(id ? `Sobreviviente creada con ID #${id}.` : 'Sobreviviente creada.');
+      setVictimaNombre(nombreCompleto);
+      setMsgVictima(`Sobreviviente creada: ${nombreCompleto}.`);
+
+      fetchVictimasLookup();
     } catch (e) {
       const detail = e?.response?.data?.detail || '';
       if (detail.toLowerCase().includes('dpi')) {
@@ -235,7 +546,9 @@ function MedicaHome() {
       lugar_origen: '',
     });
     setVictimaId(null);
+    setVictimaNombre('');
     setMsgVictima('');
+    setOcupacionCustom(false);
   }
 
   // ======= Handlers UI =======
@@ -258,17 +571,44 @@ function MedicaHome() {
   }, [casos, q, estadoFiltro]);
 
   return (
-    <div className="medica-shell">
+    <div className={`medica-shell social-shell ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+      {isMobile && sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
+
+      {/* Overlay para cerrar la bandeja al hacer click fuera */}
+      {notifOpen && (
+        <div
+          onClick={() => setNotifOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'transparent',
+            zIndex: 50
+          }}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="medica-sidebar">
-        <div className="medica-brand">ANH · Médica</div>
-        <nav className="medica-nav">
+      <aside className="medica-sidebar social-sidebar">
+        <div className="sidebar-header">
+          <div className="medica-brand social-brand">ANH · Médica</div>
+          <button
+            className="sidebar-toggle"
+            type="button"
+            aria-label="Abrir o cerrar menu"
+            onClick={() => setSidebarOpen((s) => !s)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
+        <nav className="medica-nav social-nav">
           <NavItem to="/medica" label="Dashboard" />
           <NavItem to="/medica/victimas" label="Sobrevivientes" />
         </nav>
-        <div className="medica-userbox">
-          <div className="medica-userline">{userFromToken?.nombre || 'Usuario'}</div>
-          <div className="medica-userline small">
+        <div className="medica-userbox social-userbox">
+          <div className="medica-userline social-userline">{userFromToken?.nombre || 'Usuario'}</div>
+          <div className="medica-userline social-userline small">
             Rol: {String(userFromToken?.role ?? '-')} · Área: {String(userFromToken?.area ?? '-')}
           </div>
           <button className="link-ghost" onClick={logout}>Salir</button>
@@ -276,18 +616,208 @@ function MedicaHome() {
       </aside>
 
       {/* Main */}
-      <div className="medica-main">
+      <div className="medica-main social-main">
         {/* Topbar */}
-      <header className="medica-topbar">
-  <h1>Panel del Área Médica</h1>
-  <div className="topbar-actions" data-avoid-fab>
-    <div className="muted">Hoy: {hoy}</div>
-  </div>
-</header>
+        <header className="medica-topbar social-topbar" data-avoid-fab style={{ position: 'relative' }}>
+          {(!sidebarOpen || isMobile) && (
+            <button
+              className="sidebar-toggle"
+              type="button"
+              aria-label="Abrir o cerrar menu"
+              onClick={() => setSidebarOpen((s) => !s)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+          )}
+          <h1>Panel del Área Médica</h1>
 
-        <div className="medica-content">
+          <div className="topbar-actions avoid-fab" style={{ position: 'relative' }}>
+            <div className="muted">Hoy: {hoy}</div>
+
+            {/* ✅ Campanita + badge */}
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setNotifOpen((s) => !s)}
+              title="Notificaciones"
+              style={{ position: 'relative', padding: '6px 10px' }}
+            >
+              🔔
+              {devolPend.length > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: -6,
+                    right: -6,
+                    minWidth: 18,
+                    height: 18,
+                    padding: '0 6px',
+                    borderRadius: 999,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    background: '#ef4444',
+                    color: '#fff',
+                    lineHeight: 1,
+                  }}
+                >
+                  {devolPend.length}
+                </span>
+              )}
+            </button>
+
+            {/* ✅ Bandeja (dropdown) */}
+              {notifOpen && (
+                <div
+                  className="notif-panel"
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 'calc(100% + 8px)',
+                    width: 420,
+                  maxWidth: '90vw',
+                  background: '#fff',
+                  borderRadius: 12,
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  zIndex: 60,
+                  overflow: 'hidden'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="notif-head" style={{ padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ fontWeight: 800 }}>Notificaciones</div>
+                  <div className="notif-actions" style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => { try { fetchCasos(); } catch {} }}
+                      title="Refrescar"
+                    >
+                      ↻
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => setNotifOpen(false)}
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
+
+                  <div className="notif-divider" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }} />
+
+                {devolPend.length === 0 ? (
+                  <div style={{ padding: 12 }} className="muted">
+                    Sin devoluciones nuevas.
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ padding: 12 }} className="muted">
+                      Tienes <b>{devolPend.length}</b> devolución(es) por coordinación.
+                    </div>
+
+                    <div style={{ maxHeight: 320, overflow: 'auto', padding: '0 12px 12px 12px' }}>
+                      {devolPend.map((d) => (
+                          <div
+                            key={d.key}
+                            className="notif-item"
+                            style={{
+                              padding: 10,
+                              borderRadius: 10,
+                              border: '1px solid rgba(0,0,0,0.08)',
+                              marginBottom: 10
+                          }}
+                        >
+                          <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                            Caso #{d.casoId}
+                          </div>
+                          <div className="muted" style={{ whiteSpace: 'pre-wrap' }}>
+                            {(d.detalle || '').slice(0, 280)}{(d.detalle || '').length > 280 ? '…' : ''}
+                          </div>
+                          <div style={{ marginTop: 10, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              onClick={() => marcarUnaDevolucion(d)}
+                              title="Marcar como leída"
+                            >
+                              Leída
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              onClick={() => abrirDevolucionItem(d)}
+                            >
+                              Abrir
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }} />
+                    <div className="notif-footer" style={{ padding: 12, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                      <button type="button" className="btn-secondary" onClick={onEntendidoDevolucion}>
+                        Marcar todas como vistas
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </header>
+
+        <div className="medica-content social-content">
           {/* Mensaje global */}
           {msg && <div className="alert-info">{msg}</div>}
+
+          {/* ✅ ALERTA: devoluciones pendientes por EVENTO + acceso a bandeja */}
+          {devolPend.length > 0 && (
+            <div className="alert-info dev-alert" style={{ display:'flex', gap:12, alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ flex: 1 }}>
+                <b>⚠️ Devolución recibida:</b> Tienes {devolPend.length} proceso(s) devuelto(s) por coordinación.
+                <div className="muted" style={{ marginTop: 4 }}>
+                  Filtra por <b>Borrador</b> y revisa la <b>Nota</b>.
+                </div>
+
+                <div style={{ marginTop: 8, display:'flex', flexDirection:'column', gap:6 }}>
+                  {devolPend.slice(0, 3).map((d) => (
+                    <div key={d.key} className="dev-item" style={{ display:'flex', gap:8, alignItems:'center' }}>
+                      <span className="muted">
+                        Caso #{d.casoId}: {(d.detalle || '').slice(0, 180)}{(d.detalle || '').length > 180 ? '…' : ''}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => abrirDevolucionItem(d)}
+                      >
+                        Abrir
+                      </button>
+                    </div>
+                  ))}
+                  {devolPend.length > 3 && (
+                    <div className="muted">…y {devolPend.length - 3} más.</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="dev-actions" style={{ display:'flex', gap:8, alignItems:'center' }}>
+                <button type="button" className="btn-secondary" onClick={verBandeja}>
+                  Ver bandeja
+                </button>
+                <button type="button" className="btn-secondary" onClick={onEntendidoDevolucion}>
+                  Entendido
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* KPIs */}
           <section className="kpi-grid">
@@ -306,8 +836,9 @@ function MedicaHome() {
                   <button
                     className="btn-primary"
                     onClick={() => navigate(`/medica/casos/nuevo?victima_id=${victimaId}`)}
+                    title={`Crear proceso para: ${victimaNombre || 'la sobreviviente'}`}
                   >
-                    Crear proceso con ID #{victimaId}
+                    Crear proceso para {victimaNombre || 'la sobreviviente'}
                   </button>
                 )}
               </div>
@@ -316,8 +847,7 @@ function MedicaHome() {
             {msgVictima && <div className="alert-info">{msgVictima}</div>}
 
             <form onSubmit={registrarVictima}>
-              {/* fila 1: nombres/apellidos/sexo */}
-              <div className="form-row">
+              <div className="form-row form-row-identidad">
                 <input
                   className="input"
                   name="nombres"
@@ -345,7 +875,6 @@ function MedicaHome() {
                 </select>
               </div>
 
-              {/* fila 2: fecha/dpi/teléfono (con etiquetas pequeñas) */}
               <div className="form-row">
                 <div className="form-item">
                   <label className="small-label">Fecha de nacimiento</label>
@@ -379,7 +908,6 @@ function MedicaHome() {
                 </div>
               </div>
 
-              {/* fila 3: selects demográficos */}
               <div className="form-row">
                 <div className="form-item">
                   <label className="small-label">Estado civil</label>
@@ -425,23 +953,96 @@ function MedicaHome() {
                 </div>
               </div>
 
-              {/* fila 4: textos demográficos */}
               <div className="form-row">
                 <div className="form-item">
                   <label className="small-label">Ocupación / Actividad</label>
-                  <input className="input" name="ocupacion" value={vForm.ocupacion} onChange={onVictimaChange} placeholder="Ej. Comerciante" />
+
+                  {(cat.ocupaciones || []).length > 0 ? (
+                    ocupacionCustom ? (
+                      <>
+                        <input
+                          className="input"
+                          name="ocupacion"
+                          value={vForm.ocupacion}
+                          onChange={onVictimaChange}
+                          placeholder="Escribe la nueva ocupación…"
+                        />
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ marginTop: 8 }}
+                          onClick={() => { setOcupacionCustom(false); setVForm(f => ({ ...f, ocupacion: '' })); }}
+                        >
+                          Volver a la lista
+                        </button>
+                      </>
+                    ) : (
+                      <select
+                        className="input"
+                        value={vForm.ocupacion || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '__new__') {
+                            setOcupacionCustom(true);
+                            setVForm(f => ({ ...f, ocupacion: '' }));
+                          } else {
+                            setOcupacionCustom(false);
+                            setVForm(f => ({ ...f, ocupacion: val }));
+                          }
+                        }}
+                      >
+                        <option value="">— Selecciona —</option>
+                        {(cat.ocupaciones || []).map((o) => (
+                          <option key={o.id ?? o.nombre} value={o.nombre}>{o.nombre}</option>
+                        ))}
+                        <option value="__new__">+ Agregar nueva…</option>
+                      </select>
+                    )
+                  ) : (
+                    <input
+                      className="input"
+                      name="ocupacion"
+                      value={vForm.ocupacion}
+                      onChange={onVictimaChange}
+                      placeholder="Ej. Comerciante"
+                    />
+                  )}
                 </div>
+
                 <div className="form-item">
                   <label className="small-label">Dirección</label>
                   <input className="input" name="direccion" value={vForm.direccion} onChange={onVictimaChange} placeholder="Dirección" />
                 </div>
+
+                {/* ✅ Residencia SIEMPRE es desplegable */}
                 <div className="form-item">
                   <label className="small-label">Residencia</label>
-                  <input className="input" name="residencia" value={vForm.residencia} onChange={onVictimaChange} placeholder="Barrio / Colonia / Aldea" />
+                  <select
+                    className="input"
+                    name="residencia"
+                    value={vForm.residencia}
+                    onChange={onVictimaChange}
+                  >
+                    <option value="">— Selecciona —</option>
+
+                    {(cat.residencias || []).length > 0
+                      ? (cat.residencias || []).map((r) => {
+                          const label =
+                            (r?.nombre ?? r?.descripcion ?? r?.label ?? String(r?.id ?? "")).toString().trim();
+                          return (
+                            <option key={r?.id ?? label} value={label}>
+                              {label}
+                            </option>
+                          );
+                        })
+                      : ["Barrio", "Colonia", "Aldea"].map((x) => (
+                          <option key={x} value={x}>{x}</option>
+                        ))
+                    }
+                  </select>
                 </div>
               </div>
 
-              {/* fila 5: textos extra */}
               <div className="form-row">
                 <div className="form-item">
                   <label className="small-label">Nacionalidad</label>
@@ -451,7 +1052,7 @@ function MedicaHome() {
                   <label className="small-label">Lugar de origen</label>
                   <input className="input" name="lugar_origen" value={vForm.lugar_origen} onChange={onVictimaChange} placeholder="Departamento/Municipio" />
                 </div>
-                <div className="form-item">{/* hueco para mantener 3 columnas */}</div>
+                <div className="form-item" />
               </div>
 
               <div className="card-actions" style={{ marginTop: 8 }}>
@@ -467,7 +1068,7 @@ function MedicaHome() {
             </form>
 
             <div className="muted mt-2">
-              Luego de registrar, puedes crear el proceso con el botón de arriba (se pasa el ID automáticamente).
+              Luego de registrar, puedes crear el proceso con el botón de arriba.
             </div>
           </section>
 
@@ -481,15 +1082,29 @@ function MedicaHome() {
             </div>
 
             <details className="details-quick">
-              <summary className="summary-quick">Atajo rápido (ID de sobreviviente y área)</summary>
+              <summary className="summary-quick">Atajo rápido (escribe nombre de sobreviviente y área)</summary>
               <div className="quick-body">
                 <form className="form-row" onSubmit={crearCasoRapido}>
-                  <input name="victima_id" value={nuevo.victima_id} onChange={handleChangeCaso} placeholder="sobreviviente_id" required />
+                  <input
+                    name="victima_id"
+                    value={nuevo.victima_id}
+                    onChange={handleChangeCaso}
+                    placeholder="Escribe el nombre de la sobreviviente…"
+                    list="victimas-datalist"
+                    required
+                  />
+                  <datalist id="victimas-datalist">
+                    {(victimasLookup || []).map(v => {
+                      const nombre = buildNombreVictima(v);
+                      return nombre ? <option key={v.id} value={nombre} /> : null;
+                    })}
+                  </datalist>
+
                   <input name="area_id" value={nuevo.area_id} onChange={handleChangeCaso} placeholder="area_id" required />
                   <button className="btn-primary">Crear</button>
                 </form>
                 <div className="muted">
-                  ¿No recuerdas el ID? <Link className="link" to="/medica/victimas">Ver sobrevivientes / copiar ID</Link>
+                  ¿No aparece? <Link className="link" to="/medica/victimas">Ver sobrevivientes</Link>
                 </div>
               </div>
             </details>
@@ -521,6 +1136,7 @@ function MedicaHome() {
                   <thead>
                     <tr>
                       <th>ID</th>
+                      <th>Sobreviviente</th>
                       <th>Código</th>
                       <th>Nota</th>
                       <th>Estado</th>
@@ -531,25 +1147,34 @@ function MedicaHome() {
                   <tbody>
                     {casosFiltrados.length === 0 && (
                       <tr>
-                        <td className="td-center" colSpan={6}>
+                        <td className="td-center" colSpan={7}>
                           Sin procesos · <Link to="/medica/casos/nuevo" className="link">Crear el primero</Link>
                         </td>
                       </tr>
                     )}
-                    {casosFiltrados.map((c) => (
-                      <tr key={c.id}>
-                        <td>{c.id}</td>
-                        <td>{c.codigo || '-'}</td>
-                        <td>{(notasDev[c.id] || '').trim() || '-'}</td>
-                        <td>
-                          <span className={`badge dot ${norm(c.estado)}`}>{prettyEstado(c.estado)}</span>
-                        </td>
-                        <td>{formatFecha(c.fecha_atencion || c.fecha_creacion)}</td>
-                        <td>
-                          <button className="btn-secondary" onClick={() => navigate(`/medica/casos/${c.id}`)}>Ver detalle</button>
-                        </td>
-                      </tr>
-                    ))}
+                    {casosFiltrados.map((c) => {
+                      const vid = getCasoVictimaId(c);
+                      const nombreVictima =
+                        vid != null
+                          ? (victimasById[String(vid)] || `ID #${vid}`)
+                          : '-';
+
+                      return (
+                        <tr key={c.id}>
+                          <td>{c.id}</td>
+                          <td>{nombreVictima}</td>
+                          <td>{c.codigo || '-'}</td>
+                          <td>{(notasDev[c.id] || '').trim() || '-'}</td>
+                          <td>
+                            <span className={`badge dot ${norm(c.estado)}`}>{prettyEstado(c.estado)}</span>
+                          </td>
+                          <td>{formatFecha(c.fecha_atencion || c.fecha_creacion)}</td>
+                          <td>
+                            <button className="btn-secondary" onClick={() => navigate(`/medica/casos/${c.id}`)}>Ver detalle</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -614,4 +1239,46 @@ function splitNombre(nombres = '', apellidos = '') {
   };
 }
 
+function buildNombreVictima(v) {
+  if (!v) return '';
+  const direct = (v.nombre_completo || v.nombre || '').toString().trim();
+  if (direct) return direct;
+
+  const parts = [v.primer_nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido]
+    .filter(Boolean)
+    .map(x => String(x).trim());
+  return parts.join(' ').trim();
+}
+
+function resolveVictimaByName(input, victimas) {
+  const s = norm(input || '');
+  if (!s) return null;
+
+  const exact = (victimas || []).find(v => norm(buildNombreVictima(v)) === s);
+  if (exact) return exact;
+
+  const matches = (victimas || []).filter(v => norm(buildNombreVictima(v)).includes(s));
+  if (matches.length === 1) return matches[0];
+
+  return null;
+}
+
+function getCasoVictimaId(c) {
+  const raw =
+    c?.victima_id ??
+    c?.victimaId ??
+    c?.victima ??
+    c?.sobreviviente_id ??
+    c?.sobrevivienteId ??
+    c?.victima_fk ??
+    null;
+
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export default MedicaHome;
+
+
+
+

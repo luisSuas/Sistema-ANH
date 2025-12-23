@@ -1,59 +1,13 @@
-/* ============ Reset b�sico ============ */
-.login-form-container{
-  --auth-bg: var(--bg);
-  --auth-heading: var(--text);
-  --auth-card-bg: var(--panel);
-  --auth-card-border: rgba(15,23,42,.12);
-  --auth-card-shadow: 0 16px 34px -18px rgba(15,23,42,.2);
-  --auth-input-bg: var(--panel);
-  --auth-input-border: rgba(15,23,42,.12);
-  --auth-input-focus-border: var(--primary);
-  --auth-input-focus-shadow: 0 0 0 4px rgba(37,99,235,.18);
-  --auth-toggle-bg: var(--panel);
-  --auth-toggle-border: rgba(15,23,42,.12);
-  --auth-toggle-color: var(--muted);
-  --auth-toggle-hover-border: var(--primary);
-  --auth-placeholder: var(--input-placeholder);
-}
-
-:root[data-theme="dark"] .login-form-container{
-  --auth-bg:
-    radial-gradient(1200px 600px at 10% -10%, rgba(59,130,246,.18), transparent 60%),
-    radial-gradient(1000px 500px at 100% 0%, rgba(124,58,237,.16), transparent 55%),
-    #0f172a;
-  --auth-heading: #f8fafc;
-  --auth-card-bg: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-  --auth-card-border: rgba(148,163,184,.15);
-  --auth-card-shadow: 0 30px 60px -15px rgba(2,6,23,.55), inset 0 1px 0 rgba(255,255,255,.03);
-  --auth-input-bg: #0a1221;
-  --auth-input-border: rgba(148,163,184,.18);
-  --auth-input-focus-border: rgba(96,165,250,.9);
-  --auth-input-focus-shadow: 0 0 0 4px rgba(59,130,246,.15), 0 10px 20px -12px rgba(59,130,246,.35);
-  --auth-toggle-bg: #0e172a;
-  --auth-toggle-border: rgba(148,163,184,.18);
-  --auth-toggle-color: #cbd5e1;
-  --auth-toggle-hover-border: rgba(96,165,250,.6);
-  --auth-placeholder: #64748b;
-}
-
-:root[data-theme="light"] .login-form-container{
-  --auth-bg:
-    radial-gradient(1100px 520px at 8% -12%, rgba(59,130,246,.14), transparent 60%),
-    radial-gradient(900px 420px at 95% -6%, rgba(124,58,237,.10), transparent 55%),
-    #f6f8ff;
-  --auth-heading: #0f172a;
-  --auth-card-bg: linear-gradient(180deg, rgba(15,23,42,.04), rgba(15,23,42,.01));
-  --auth-card-border: rgba(15,23,42,.08);
-  --auth-card-shadow: 0 22px 40px -18px rgba(15,23,42,.25), inset 0 1px 0 rgba(255,255,255,.6);
-  --auth-input-bg: #ffffff;
-  --auth-input-border: rgba(15,23,42,.12);
-  --auth-input-focus-border: rgba(37,99,235,.65);
-  --auth-input-focus-shadow: 0 0 0 4px rgba(37,99,235,.15), 0 8px 22px -12px rgba(37,99,235,.2);
-  --auth-toggle-bg: #ffffff;
-  --auth-toggle-border: rgba(15,23,42,.12);
-  --auth-toggle-color: #475569;
-  --auth-toggle-hover-border: rgba(37,99,235,.45);
-  --auth-placeholder: #8b94ab;
+/* ============ Reset básico ============ */
+:root[data-theme="dark"] {
+  --bg: #0f172a;          /* slate-900 */
+  --card: #0b1220;        /* más claro que el bg */
+  --muted: #94a3b8;       /* slate-400 */
+  --text: #e2e8f0;        /* slate-200 */
+  --brand: #60a5fa;       /* blue-400 */
+  --brand-strong: #3b82f6;/* blue-500 */
+  --error-bg: #fee2e2;    /* red-100 */
+  --error-bd: #fecaca;    /* red-200 */
 }
 
 * { box-sizing: border-box; }
@@ -66,21 +20,25 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe U
   display: grid;
   place-items: center;
   padding: 32px 16px;
-  background: var(--auth-bg);
-  color: var(--text);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(59,130,246,.18), transparent 60%),
+    radial-gradient(1000px 500px at 100% 0%, rgba(124,58,237,.16), transparent 55%),
+    var(--bg);
 }
 
 .login-form {
   width: 100%;
   max-width: 420px;
-  background: var(--auth-card-bg);
-  border: 1px solid var(--auth-card-border);
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+  border: 1px solid rgba(148,163,184,.15);
   border-radius: 16px;
   padding: 28px 22px;
   display: grid;
   gap: 12px;
   backdrop-filter: blur(6px);
-  box-shadow: var(--auth-card-shadow);
+  box-shadow:
+    0 30px 60px -15px rgba(2,6,23,.55),
+    inset 0 1px 0 rgba(255,255,255,.03);
 }
 
 /* Header */
@@ -90,7 +48,7 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe U
   font-weight: 700;
   letter-spacing: .2px;
   text-align: center;
-  color: var(--auth-heading);
+  color: var(--text);
 }
 .login-subtitle {
   margin: -6px 0 4px;
@@ -115,17 +73,19 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe U
   border-radius: 10px;
   outline: none;
   color: var(--text);
-  background: var(--auth-input-bg);
-  border: 1px solid var(--auth-input-border);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
   transition: border-color .2s, box-shadow .2s, background .2s;
 }
 
-.login-form input::placeholder { color: var(--auth-placeholder); }
+.login-form input::placeholder { color: var(--muted); }
 
 .login-form input:focus {
-  border-color: var(--auth-input-focus-border);
-  box-shadow: var(--auth-input-focus-shadow);
-  background: var(--auth-input-bg);
+  border-color: var(--primary);
+  box-shadow:
+    0 0 0 4px rgba(59,130,246,.15),
+    0 10px 20px -12px rgba(59,130,246,.35);
+  background: var(--panel);
 }
 
 /* Password field with button */
@@ -142,18 +102,14 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe U
   height: calc(100% - 12px);
   padding: 0 12px;
   border-radius: 8px;
-  border: 1px solid var(--auth-toggle-border);
-  background: var(--auth-toggle-bg);
-  color: var(--auth-toggle-color);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
   font-size: 12px;
   cursor: pointer;
   transition: transform .12s ease, border-color .2s, background .2s;
 }
-.toggle-pass:hover {
-  transform: translateY(-1px);
-  border-color: var(--auth-toggle-hover-border);
-  color: var(--text);
-}
+.toggle-pass:hover { transform: translateY(-1px); border-color: rgba(96,165,250,.6); color: var(--text); }
 .toggle-pass:active { transform: translateY(0); }
 
 /* Error */
@@ -195,65 +151,6 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe U
   cursor: not-allowed;
   opacity: .7;
   box-shadow: none;
-}
-
-/* MFA modal overlay (separate to avoid inline styles and CSP issues) */
-.mfa-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-
-.mfa-modal {
-  width: 360px;
-  background: #0f172a;
-  color: #e5e7eb;
-  border-radius: 16px;
-  padding: 22px;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.mfa-modal input {
-  background: #0b1220;
-  border: 1px solid #1f2a44;
-  color: #e5e7eb;
-  padding: 10px 12px;
-  border-radius: 10px;
-  outline: none;
-  text-align: center;
-  font-size: 18px;
-  letter-spacing: 2px;
-}
-
-.mfa-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 8px;
-}
-
-.mfa-actions button {
-  border: none;
-  padding: 10px 12px;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.mfa-actions button:not(.mfa-cancel) {
-  background: linear-gradient(180deg, #4776e6, #3b5bdb);
-  color: #fff;
-}
-
-.mfa-cancel {
-  background: #1f2937;
-  color: #e5e7eb;
 }
 
 /* Footer / links auxiliares (opcional) */

@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../servicios/Servicios";
-import "./Victimas.css"; 
-const BASE = "/legal"; 
+import "./Victimas.css"; // estilos del módulo
 
 function Victimas() {
   const nav = useNavigate();
@@ -29,6 +28,7 @@ function Victimas() {
   });
   const [creando, setCreando] = useState(false);
   const [victimaId, setVictimaId] = useState(null);
+  const [victimaNombre, setVictimaNombre] = useState(""); // ✅ NUEVO (para el botón)
   const [msgForm, setMsgForm] = useState("");
 
   useEffect(() => {
@@ -59,6 +59,7 @@ function Victimas() {
 
     setMsgForm("");
     setVictimaId(null);
+    setVictimaNombre("");
 
     // Validación mínima
     if (!vForm.nombres.trim() || !vForm.apellidos.trim()) {
@@ -107,7 +108,10 @@ function Victimas() {
 
       const id = data?.id;
       setVictimaId(id || null);
-      setMsgForm(id ? `Sobreviviente creada con ID #${id}.` : "Sobreviviente creada.");
+      setVictimaNombre(nombreCompleto); // ✅ para el botón
+
+      // ✅ CAMBIO: el mensaje ya NO muestra "con ID"
+      setMsgForm(`Sobreviviente creada: ${nombreCompleto}.`);
 
       // refresca listado
       fetchVictimas();
@@ -138,6 +142,7 @@ function Victimas() {
       nacionalidad: "",
     });
     setVictimaId(null);
+    setVictimaNombre("");
     setMsgForm("");
   }
 
@@ -148,18 +153,18 @@ function Victimas() {
   }, [lista, q]);
 
   return (
-    <div className="social-main">
-      <header className="social-topbar">
+    <div className="social-main victimas-page area-main">
+      <header className="social-topbar" data-avoid-fab>
         <h1>Sobrevivientes</h1>
         <div className="topbar-actions">
-          <Link to={BASE} className="btn-secondary">← Volver al panel</Link>
+          <Link to="/legal" className="btn-secondary">← Volver al panel</Link>
         </div>
       </header>
 
       <div className="social-content">
         {msg && <div className="alert-info">{msg}</div>}
 
-        {/* Registrar víctima */}
+        {/* Registrar sobreviviente */}
         <section className="card">
           <div className="card-header">
             <h3>Registrar sobreviviente</h3>
@@ -167,9 +172,11 @@ function Victimas() {
               {victimaId && (
                 <button
                   className="btn-primary"
-                  onClick={() => nav(`${BASE}/casos/nuevo?victima_id=${victimaId}`)}
+                  onClick={() => nav(`/legal/casos/nuevo?victima_id=${victimaId}`)}
+                  title={`Crear proceso para: ${victimaNombre || "la sobreviviente"}`}
                 >
-                  Crear proceso con ID #{victimaId}
+                  {/* ✅ CAMBIO: el botón muestra nombre, no ID */}
+                  Crear proceso para {victimaNombre || "la sobreviviente"}
                 </button>
               )}
             </div>
@@ -179,7 +186,7 @@ function Victimas() {
 
           <form onSubmit={registrarVictima}>
             {/* fila 1: nombre, apellidos, sexo */}
-            <div className="form-row">
+            <div className="form-row form-row-identidad">
               <input
                 className="input"
                 name="nombres"
@@ -354,30 +361,32 @@ function Victimas() {
                       </td>
                     </tr>
                   )}
-                  {filtradas.map((v) => (
-                    <tr key={v.id}>
-                      <td>{v.id}</td>
-                      <td>
-                        {v.nombre ||
-                          [v.primer_nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido]
-                            .filter(Boolean)
-                            .join(" ") ||
-                          "-"}
-                      </td>
-                      <td>{v.dpi || "-"}</td>
-                      <td>{v.telefono || "-"}</td>
-                      <td>
-                        <button
-                          className="btn-secondary"
-                          onClick={() =>
-                            nav(`${BASE}/casos/nuevo?victima_id=${v.id}`)
-                          }
-                        >
-                          Nuevo proceso
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {filtradas.map((v) => {
+                    const nombre =
+                      v.nombre ||
+                      [v.primer_nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido]
+                        .filter(Boolean)
+                        .join(" ") ||
+                      "-";
+
+                    return (
+                      <tr key={v.id}>
+                        <td>{v.id}</td>
+                        <td>{nombre}</td>
+                        <td>{v.dpi || "-"}</td>
+                        <td>{v.telefono || "-"}</td>
+                        <td>
+                          <button
+                            className="btn-secondary"
+                            onClick={() => nav(`/legal/casos/nuevo?victima_id=${v.id}`)}
+                            title={`Crear proceso para: ${nombre}`}
+                          >
+                            Crear proceso
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -411,3 +420,4 @@ function splitNombre(nombres, apellidos) {
 }
 
 export default Victimas;
+

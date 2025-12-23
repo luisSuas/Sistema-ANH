@@ -46,6 +46,8 @@ function yearBounds(y = (new Date()).getFullYear()){
 export default function GeneralHomeCoordinacion(){
   const navigate = useNavigate();
   const user = getUserFromToken();
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 780 : false));
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [tab, setTab] = useState('general'); // 'general' | 'resumen'
   const [areas, setAreas] = useState([]);
@@ -59,6 +61,17 @@ export default function GeneralHomeCoordinacion(){
   const [rows, setRows] = useState([]);         // vista previa informe general
   const [resumen, setResumen] = useState([]);    // resumen por área
   const [q, setQ] = useState('');
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = typeof window !== 'undefined' ? window.innerWidth <= 780 : false;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(()=>{
     // seguridad mínima en UI: CG = 1
@@ -182,9 +195,22 @@ async function downloadExcelAnual(year = null, filenameHint = 'reporte_anual'){
   function logout(){ setToken(null); navigate('/login'); }
 
   return (
-    <div className="general-shell">
+    <div className={`general-shell ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+      {isMobile && sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
       <aside className="general-sidebar">
-        <div className="general-brand">ANH · General</div>
+        <div className="sidebar-header">
+          <div className="general-brand">ANH ú General</div>
+          <button
+            className="sidebar-toggle"
+            type="button"
+            aria-label="Abrir o cerrar menu"
+            onClick={() => setSidebarOpen((s) => !s)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
         <nav className="general-nav">
           <button className={`nav-item ${tab==='general'?'active':''}`} onClick={()=>setTab('general')}>Informes (Registros)</button>
           <button className={`nav-item ${tab==='resumen'?'active':''}`} onClick={()=>setTab('resumen')}>Resumen por Área</button>
@@ -197,8 +223,20 @@ async function downloadExcelAnual(year = null, filenameHint = 'reporte_anual'){
       </aside>
 
       <div className="general-main">
-        <header className="general-topbar">
-          <h1>Panel de Coordinación General</h1>
+        <header className="general-topbar coord-topbar" data-avoid-fab>
+          {(!sidebarOpen || isMobile) && (
+            <button
+              className="sidebar-toggle"
+              type="button"
+              aria-label="Abrir o cerrar menu"
+              onClick={() => setSidebarOpen((s) => !s)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+          )}
+<h1>Panel de Coordinación General</h1>
           <div className="topbar-actions">
             {tab==='general' && (
               <input className="input" placeholder="Buscar en vista previa…" value={q} onChange={(e)=>setQ(e.target.value)} />
@@ -379,3 +417,6 @@ async function downloadExcelAnual(year = null, filenameHint = 'reporte_anual'){
     </div>
   );
 }
+
+
+

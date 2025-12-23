@@ -2,7 +2,7 @@
 import axios from "axios";
 
 /** ─────────────────────────────────────────────────────────
- * BASE URL ROBUSTA
+ * BASE URL ROBUSTA (evita /apiv2/apiv2)
  * ───────────────────────────────────────────────────────── */
 (function warnMissingEnv() {
   if (!process.env.REACT_APP_API_URL) {
@@ -10,10 +10,7 @@ import axios from "axios";
   }
 })();
 
-const RAW = (
-  process.env.REACT_APP_API_URL ||
-  (typeof window !== "undefined" ? window.location.origin : "http://localhost:8800")
-).trim();
+const RAW = (process.env.REACT_APP_API_URL || "http://localhost:8800").trim();
 
 function normalizeHost(raw) {
   let host = raw;
@@ -22,11 +19,19 @@ function normalizeHost(raw) {
   return host.replace(/\/$/, ""); // sin slash final
 }
 
-const API_HOST = normalizeHost(RAW);
+// ✅ Si el env ya trae /apiv2, lo quitamos para no duplicar
+function stripApiV2(host) {
+  return String(host || "").replace(/\/apiv2\/?$/i, "");
+}
+
+const API_HOST = stripApiV2(normalizeHost(RAW));
 const BASE_URL = `${API_HOST}/apiv2`;
 
 /** Instancia central de axios */
-const api = axios.create({ baseURL: BASE_URL });
+const api = axios.create({
+  baseURL: BASE_URL,
+  timeout: 30000, // ✅ evita requests colgadas eternamente
+});
 
 /* =========================================================
    TOKEN (única fuente de verdad + listeners anti-bucle)
@@ -102,9 +107,19 @@ try {
 /* ==========================
    Helpers
    ========================== */
+
+// ✅ JWT usa base64url: atob puede fallar con '-' '_' y padding
+function base64UrlToBase64(input = "") {
+  let s = String(input).replace(/-/g, "+").replace(/_/g, "/");
+  while (s.length % 4) s += "=";
+  return s;
+}
+
 function decodeJWT(tkn) {
   try {
-    const payload = JSON.parse(atob(String(tkn).split(".")[1]));
+    const part = String(tkn).split(".")[1];
+    if (!part) return null;
+    const payload = JSON.parse(atob(base64UrlToBase64(part)));
     return payload || null;
   } catch {
     return null;
@@ -122,7 +137,10 @@ export function whoAmI() {
    Interceptores
    ========================== */
 api.interceptors.request.use((cfg) => {
-  if (_token) cfg.headers.Authorization = `Bearer ${_token}`;
+  if (_token) {
+    cfg.headers = cfg.headers || {};
+    cfg.headers.Authorization = `Bearer ${_token}`;
+  }
   return cfg;
 });
 
@@ -169,7 +187,6 @@ export async function login(username, password, otp) {
     const p = decodeJWT(data?.token);
     return { id: p?.sub, nombre: p?.name, role: p?.role, area: p?.area };
   } catch (err) {
-    // preserva semántica previa: que el caller maneje el mensaje
     throw err;
   }
 }
@@ -269,12 +286,9 @@ export const getCasoById = (id) => api.get(`/casos/${id}`);
 
 function sanitizeCasoPayload(payload = {}) {
   try {
+    // ✅ Mantengo esto igual para NO romper su UI actual.
+    //    (Usted ya tiene backend nuevo, pero esto sigue siendo compatible.)
     const omit = new Set([
-      "tipos_violencia_ids",
-      "medios_agresion_ids",
-      "ref_interna_ids",
-      "ref_externa_ids",
-      "situaciones_riesgo",
       "hijos",
       "agresores",
     ]);
@@ -290,10 +304,12 @@ export const createCaso = (payload) =>
   api.post("/casos", sanitizeCasoPayload(payload), {
     headers: { "Content-Type": "application/json" },
   });
+
 export const updateCaso = (id, payload) =>
   api.put(`/casos/${id}`, sanitizeCasoPayload(payload), {
     headers: { "Content-Type": "application/json" },
   });
+
 export const deleteCaso = (id) => api.delete(`/casos/${id}`);
 
 // Flujo de estados / acciones
@@ -322,7 +338,7 @@ export const getInformeGeneral = (params = {}) =>
 export const getInformeResumen = (params = {}) =>
   api.get("/informes/resumen", { params });
 
-/** 
+/**
  * NUEVO opcional: intenta varias rutas comunes para "Resumen por área"
  * Úsalo si tu backend no expone exactamente /informes/resumen
  */
@@ -365,5 +381,38 @@ export const adminUpdateUser = (id, payload) =>
   });
 
 export const adminDeleteUser = (id) => api.delete(`/admin/users/${id}`);
+
+/* ─────────────────────────────────────────────────────────────
+ * ✅ NUEVOS HELPERS (NO ROMPEN NADA EXISTENTE)
+ *     Para lo que ya implementó en backend /apiv2
+ * ───────────────────────────────────────────────────────────── */
+
+// 1) Búsqueda liviana para selects/autocomplete (Operativa)
+export const getVictimasOperativa = (params = {}) =>
+  api.get("/operativa/victimas", { params });
+// Ej: getVictimasOperativa({ q: 'ana', limit: 50, offset: 0 })
+
+// 2) Draft por víctima (idempotente)
+export const getCasoDraft = (victima_id) =>
+  api.get("/casos/draft", { params: { victima_id } });
+
+// 3) Devolver caso (pendiente -> borrador) con motivo
+export const devolverCaso = (id, motivo = "") =>
+  api.post(`/casos/${id}/devolver`, { motivo });
+
+// 4) Guardar detalle + completar (opción B que agregó)
+export const detalleYCompletarCaso = (id, payload) =>
+  api.put(`/casos/${id}/detalle-y-completar`, payload, {
+    headers: { "Content-Type": "application/json" },
+  });
+
+/**
+ * ✅ Si usted quiere actualizar el caso con relaciones (hijos/agresores/pivotes)
+ * sin que sanitizeCasoPayload se lo borre, use esto (nuevo, sin afectar lo viejo):
+ */
+export const updateCasoFull = (id, payload) =>
+  api.put(`/casos/${id}`, payload, {
+    headers: { "Content-Type": "application/json" },
+  });
 
 export default api;

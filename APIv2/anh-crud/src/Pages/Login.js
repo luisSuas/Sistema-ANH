@@ -5,60 +5,6 @@ import { useAuth } from "../auth/AuthContext";
 import { login as doLogin } from "../servicios/Servicios";
 import "./Login.css";
 
-const MFA_STYLES = {
-  backdrop: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,.55)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 50,
-  },
-  modal: {
-    width: 360,
-    background: "#0f172a",
-    color: "#e5e7eb",
-    borderRadius: 16,
-    padding: 22,
-    boxShadow: "0 10px 35px rgba(0,0,0,.5)",
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
-  },
-  input: {
-    background: "#0b1220",
-    border: "1px solid #1f2a44",
-    color: "#e5e7eb",
-    padding: "10px 12px",
-    borderRadius: 10,
-    outline: "none",
-    textAlign: "center",
-    fontSize: 18,
-    letterSpacing: 2,
-  },
-  actions: {
-    display: "flex",
-    gap: 8,
-    justifyContent: "flex-end",
-    marginTop: 8,
-  },
-  button: {
-    border: "none",
-    padding: "10px 12px",
-    borderRadius: 10,
-    cursor: "pointer",
-  },
-  confirm: {
-    background: "linear-gradient(180deg, #4776e6, #3b5bdb)",
-    color: "#fff",
-  },
-  cancel: {
-    background: "#1f2937",
-    color: "#e5e7eb",
-  },
-};
-
 function getStoredToken() {
   const keys = ["access_token", "token", "authToken", "jwt", "bearer"];
   for (const k of keys) {
@@ -334,13 +280,8 @@ navigate(target, { replace: true });
 
       {/* 🔐 Modal de MFA */}
       {showMfa && (
-        <div className="mfa-backdrop" style={MFA_STYLES.backdrop}>
-          <div
-            className="mfa-modal"
-            role="dialog"
-            aria-modal="true"
-            style={MFA_STYLES.modal}
-          >
+        <div className="mfa-backdrop">
+          <div className="mfa-modal" role="dialog" aria-modal="true">
             <h3>Verificación MFA</h3>
             <p>Abre tu app Authenticator y escribe el código de 6 dígitos.</p>
             <input
@@ -351,10 +292,9 @@ navigate(target, { replace: true });
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
               placeholder="000000"
               autoFocus
-              style={MFA_STYLES.input}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  e.preventDefault(); // ? no envía el form padre
+                  e.preventDefault(); // ✅ no envía el form padre
                   if (!isSubmitting) handleConfirmOtp();
                 }
               }}
@@ -364,11 +304,10 @@ navigate(target, { replace: true });
                 {mfaError}
               </div>
             )}
-            <div className="mfa-actions" style={MFA_STYLES.actions}>
+            <div className="mfa-actions">
               <button
                 type="button"
                 className="mfa-cancel"
-                style={{ ...MFA_STYLES.button, ...MFA_STYLES.cancel }}
                 onClick={() => {
                   setShowMfa(false);
                   setOtp("");
@@ -377,16 +316,39 @@ navigate(target, { replace: true });
               >
                 Cancelar
               </button>
-              <button
-                type="button"
-                style={{ ...MFA_STYLES.button, ...MFA_STYLES.confirm }}
-                onClick={handleConfirmOtp}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Verificando." : "Confirmar"}
+              <button type="button" onClick={handleConfirmOtp} disabled={isSubmitting}>
+                {isSubmitting ? "Verificando…" : "Confirmar"}
               </button>
             </div>
           </div>
+
+          {/* Estilos mínimos para el modal (no invade tu CSS) */}
+          <style>{`
+            .mfa-backdrop {
+              position: fixed; inset: 0; background: rgba(0,0,0,.55);
+              display:flex; align-items:center; justify-content:center; z-index: 50;
+            }
+            .mfa-modal {
+              width: 360px; background: var(--panel); color: var(--text);
+              border-radius: 16px; padding: 22px; box-shadow: 0 10px 35px rgba(0,0,0,.5);
+              display: flex; flex-direction: column; gap: 10px;
+              border: 1px solid var(--border);
+            }
+            .mfa-modal input {
+              background: var(--panel-2); border:1px solid var(--border); color: var(--text);
+              padding:10px 12px; border-radius:10px; outline:none; text-align:center;
+              font-size: 18px; letter-spacing: 2px;
+            }
+            .mfa-actions { display:flex; gap:8px; justify-content:flex-end; margin-top: 8px; }
+            .mfa-actions button { border:none; padding:10px 12px; border-radius:10px; cursor:pointer; }
+            .mfa-actions button:not(.mfa-cancel) {
+              background: linear-gradient(180deg, #4776e6, #3b5bdb); color: white;
+            }
+            .mfa-cancel {
+              background: var(--panel-2); color: var(--text);
+              border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,.08);
+            }
+          `}</style>
         </div>
       )}
     </div>
@@ -394,4 +356,3 @@ navigate(target, { replace: true });
 };
 
 export default Login;
-

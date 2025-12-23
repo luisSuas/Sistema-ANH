@@ -1,4 +1,4 @@
-// src/social/CasoNuevo.js
+// src/albergue/CasoNuevo.js
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import api, { getCatalogo } from "../servicios/Servicios";
@@ -34,7 +34,8 @@ export default function CasoNuevo() {
     refInterna: [],
     refExterna: [],
     municipios: [],       // [{id, nombre, departamento_id}]
-    departamentos: [],    // [{id, nombre}]
+    departamentos: [], 
+    residencias: [],   // [{id, nombre}]
   });
   const [cargandoCat, setCargandoCat] = useState(true);
 
@@ -47,6 +48,7 @@ export default function CasoNuevo() {
     motivo_consulta: "",
     fecha_atencion: new Date().toISOString().slice(0, 10),
     residencia: "",
+    residencia_id: "",
     telefono: "",
     municipio_id: "",
     sexual_conocido: false,
@@ -80,6 +82,21 @@ export default function CasoNuevo() {
   const [enviando, setEnviando] = useState(false);
   const [msg, setMsg] = useState("");
 
+  // ===== NUEVO: lookup de sobrevivientes (para mostrar nombre en vez de ID)
+  const [victimasLookup, setVictimasLookup] = useState([]);
+  const [victimaNombreInput, setVictimaNombreInput] = useState("");
+
+  // ===== NUEVO: mapa id -> nombre
+  const victimasById = useMemo(() => {
+    const m = {};
+    (victimasLookup || []).forEach((v) => {
+      if (v?.id == null) return;
+      const nombre = buildNombreVictima(v);
+      m[String(v.id)] = nombre || `ID #${v.id}`;
+    });
+    return m;
+  }, [victimasLookup]);
+
   // ===== Prellenar victima_id desde ?victima_id=
   useEffect(() => {
     const q = new URLSearchParams(search);
@@ -90,25 +107,91 @@ export default function CasoNuevo() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
-  // ===== Si ya hay borrador para esa víctima, úsalo
+  // ===== NUEVO: cargar sobrevivientes para autocompletar por nombre
   useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await api.get("/victimas");
+        if (!alive) return;
+        setVictimasLookup(Array.isArray(data) ? data : []);
+      } catch {
+        if (!alive) return;
+        setVictimasLookup([]);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // ===== NUEVO: cuando ya hay victima_id, mostrar el nombre automáticamente
+  useEffect(() => {
+    const vId = String(form.victima_id || "").trim();
+    if (!vId) return;
+    const nombre = victimasById[vId];
+    if (nombre && nombre !== victimaNombreInput) {
+      setVictimaNombreInput(nombre);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.victima_id, victimasById]);
+
+  // ===== NUEVO: escribir/seleccionar nombre -> resolver victima_id sin romper el flujo
+  const onVictimaNombreChange = (e) => {
+    const val = e.target.value;
+    setVictimaNombreInput(val);
+
+    // si escribe solo números, lo tratamos como ID (por compatibilidad)
+    const maybeId = Number(String(val).trim());
+    if (Number.isInteger(maybeId) && maybeId > 0) {
+      setForm((f) => ({ ...f, victima_id: String(maybeId) }));
+      return;
+    }
+
+    const found = resolveVictimaByName(val, victimasLookup);
+    if (found?.id) {
+      setForm((f) => ({ ...f, victima_id: String(found.id) }));
+    } else {
+      // no adivinamos; solo dejamos el nombre escrito
+      // (victima_id se valida al guardar)
+    }
+  };
+
+  // ===== Si ya hay borrador para esa víctima, úsalo (endpoint dedicado)
+  useEffect(() => {
+    let alive = true;
+
     async function checkBorrador() {
       const vId = Number(form.victima_id);
-      if (!vId) return;
+
+      // si limpian el campo, limpia el casoId
+      if (!Number.isInteger(vId) || vId <= 0) {
+        if (alive) setCasoId(null);
+        return;
+      }
+
       try {
-        const resp = await api.get(`/casos`).catch(() => ({ data: [] }));
-        const lista = Array.isArray(resp?.data) ? resp.data : [];
-        const borr = lista
-          .filter(
-            (c) =>
-              Number(c?.victima_id) === vId &&
-              String(c?.estado || "").toLowerCase() === "borrador"
-          )
-          .sort((a, b) => Number(b.id) - Number(a.id))[0];
-        if (borr?.id) setCasoId(borr.id);
-      } catch (_) {}
+        // ✅ Endpoint nuevo (más correcto y más rápido)
+        const { data } = await api.get(`/casos/draft`, { params: { victima_id: vId } });
+        if (!alive) return;
+        if (data?.id) setCasoId(data.id);
+      } catch (e) {
+        if (!alive) return;
+
+        // 404 = no hay borrador, no es error real
+        if (e?.response?.status === 404) {
+          setCasoId(null);
+          return;
+        }
+
+        // Si por rol da 403 o cualquier otro error, NO rompa el flujo
+        // (deja casoId como está y permite que el usuario cree uno con "Guardar borrador")
+        console.warn("[CasoNuevo] draft no disponible:", e?.response?.status, e?.message);
+      }
     }
+
     checkBorrador();
+    return () => { alive = false; };
   }, [form.victima_id]);
 
   // ===== Cargar catálogos
@@ -130,6 +213,7 @@ export default function CasoNuevo() {
           refExt,
           municipios,
           departamentos,
+          residencias,
         ] = await Promise.all([
           getCatalogo("tipos-violencia").then((r) => r.data).catch(() => []),
           getCatalogo("medios-agresion").then((r) => r.data).catch(() => []),
@@ -143,6 +227,7 @@ export default function CasoNuevo() {
           api.get("/catalogos/destinos-ref-externa").then((r) => r.data).catch(() => []),
           getCatalogo("municipios").then((r) => r.data).catch(() => []),
           getCatalogo("departamentos").then((r) => r.data).catch(() => []),
+          getCatalogo("residencias").then((r) => r.data).catch(() => []),
         ]);
         if (!alive) return;
         setCat({
@@ -158,6 +243,7 @@ export default function CasoNuevo() {
           refExterna: toOpt(refExt),
           municipios: toMuni(municipios), // preserva departamento_id
           departamentos: toOpt(departamentos),
+          residencias: toOpt(residencias),
         });
       } catch (e) {
         console.error(e);
@@ -298,7 +384,7 @@ export default function CasoNuevo() {
 
     const vId = Number(form.victima_id);
     if (!Number.isInteger(vId) || vId <= 0) {
-      setMsg("Debes indicar la sobreviviente (ID).");
+      setMsg("Debes indicar la víctima.");
       return;
     }
 
@@ -310,6 +396,7 @@ export default function CasoNuevo() {
         motivo_consulta: emptyToNull(form.motivo_consulta),
         fecha_atencion: form.fecha_atencion || null,
         residencia: emptyToNull(form.residencia),
+        residencia_id: form.residencia_id ? Number(form.residencia_id) : null,
         telefono: emptyToNull(form.telefono),
         municipio_id: form.municipio_id ? Number(form.municipio_id) : null,
         sexual_conocido: !!form.sexual_conocido,
@@ -380,10 +467,12 @@ export default function CasoNuevo() {
     }
   };
 
-  const irDetalle = () => { if (casoId) nav(`/albergue/casos/${casoId}`); };
+  const irDetalle = () => {
+    if (casoId) nav(`/albergue/casos/${casoId}`);
+  };
 
   return (
-    <div className="cn-wrap">
+    <div className="cn-wrap cn-wrap-social">
       <div className="cn-header">
         <div>
           <Link to="/albergue" className="cn-back">
@@ -405,20 +494,31 @@ export default function CasoNuevo() {
           <Row>
             <Col>
               <Label>
-                Sobreviviente (ID) <Req />
+                Sobreviviente <Req />
               </Label>
+
+              {/* ✅ Se muestra el NOMBRE (y por debajo se resuelve victima_id internamente) */}
               <input
-                name="victima_id"
-                value={form.victima_id}
-                onChange={onChange}
-                placeholder="Ej. 12"
+                value={victimaNombreInput}
+                onChange={onVictimaNombreChange}
+                placeholder="Escribe el nombre de la sobreviviente…"
+                list="cn-victimas-datalist"
                 required
               />
+
+              <datalist id="cn-victimas-datalist">
+                {(victimasLookup || []).map((v) => {
+                  const nombre = buildNombreVictima(v);
+                  return nombre ? <option key={v.id} value={nombre} /> : null;
+                })}
+              </datalist>
+
               <small className="cn-help">
-                ¿No la sabes? Ve a <Link to="/albergue/victimas">Sobrevivientes</Link>{" "}
-                y copia el ID.
+                ¿No aparece? Ve a <Link to="/albergue/victimas">Sobrevivientes</Link>{" "}
+                y búscala por nombre.
               </small>
             </Col>
+
             <Col>
               <Label>Fecha de atención</Label>
               <input
@@ -431,8 +531,8 @@ export default function CasoNuevo() {
           </Row>
         </Fieldset>
 
-        {/* SECCIÓN 2: Datos del caso */}
-        <Fieldset title="Datos del caso">
+        {/* SECCIÓN 2: Datos del proceso */}
+        <Fieldset title="Datos del proceso">
           <Row>
             <Col>
               <Label>Motivo de la consulta</Label>
@@ -445,15 +545,33 @@ export default function CasoNuevo() {
             </Col>
           </Row>
           <Row>
-            <Col>
-              <Label>Residencia</Label>
-              <input
-                name="residencia"
-                value={form.residencia}
-                onChange={onChange}
-                placeholder="Colonia / Barrio / Aldea…"
-              />
-            </Col>
+           <Col>
+  <Label>Residencia</Label>
+  {cargandoCat ? (
+    <div className="cn-muted">Cargando catálogos…</div>
+  ) : (
+    <select
+      name="residencia_id"
+      value={String(form.residencia_id ?? "")}
+      onChange={(e) => {
+        const rid = e.target.value;
+        const nombre = rid
+          ? (cat.residencias || []).find((r) => String(r.id) === String(rid))
+              ?.nombre || ""
+          : "";
+        setForm((f) => ({ ...f, residencia_id: rid, residencia: nombre }));
+      }}
+    >
+      <option value="">— Selecciona —</option>
+      {(cat.residencias || []).map((r) => (
+        <option key={r.id} value={String(r.id)}>
+          {r.nombre}
+        </option>
+      ))}
+    </select>
+  )}
+</Col>
+
             <Col>
               <Label>Teléfono</Label>
               <input
@@ -885,7 +1003,7 @@ export default function CasoNuevo() {
                   />
                 </Col>
                 <Col>
-                  <Label>Relación con la sobreviviente</Label>
+                  <Label>Relación con la víctima</Label>
                   <select
                     value={a.relacion_agresor_id}
                     onChange={(e) =>
@@ -954,7 +1072,7 @@ export default function CasoNuevo() {
             onClick={irDetalle}
             title={
               casoId
-                ? `Ir al detalle del caso #${casoId}`
+                ? `Ir al detalle del proceso #${casoId}`
                 : "Primero guarda el borrador"
             }
           >
@@ -1101,3 +1219,37 @@ async function attachTodo(casoId, f) {
     // Silencioso para no bloquear el flujo
   }
 }
+
+/* ===== NUEVO: helpers de sobrevivientes (nombre <-> id) ===== */
+function buildNombreVictima(v) {
+  if (!v) return "";
+  const direct = (v.nombre_completo || v.nombre || "").toString().trim();
+  if (direct) return direct;
+
+  const parts = [v.primer_nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido]
+    .filter(Boolean)
+    .map((x) => String(x).trim());
+  return parts.join(" ").trim();
+}
+
+function normText(s) {
+  return String(s || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function resolveVictimaByName(input, victimas) {
+  const s = normText(input || "");
+  if (!s) return null;
+
+  const exact = (victimas || []).find((v) => normText(buildNombreVictima(v)) === s);
+  if (exact) return exact;
+
+  const matches = (victimas || []).filter((v) => normText(buildNombreVictima(v)).includes(s));
+  if (matches.length === 1) return matches[0];
+
+  return null;
+}
+

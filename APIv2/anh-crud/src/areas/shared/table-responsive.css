@@ -1,0 +1,361 @@
+/* Conversión de tablas a tarjetas para móvil (SCOPE: solo áreas) */
+@media (max-width: 820px) {
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-cell {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    width: 100%;
+    gap: 12px;
+  }
+
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-cell .btn,
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-cell .btn-crear {
+    flex: 0 1 calc(50% - 6px);
+    min-width: 160px;
+    max-width: 220px;
+  }
+}
+
+@media (max-width: 640px) {
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table,
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .table {
+    display: block;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    min-width: 0;
+  }
+
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table thead,
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .table thead {
+    display: none;
+  }
+
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody,
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .table tbody {
+    display: grid;
+    gap: 14px;
+    padding: 0;
+    margin: 0;
+  }
+
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody tr,
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .table tbody tr {
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td,
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .table tbody td {
+    display: block;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 14px;
+  }
+
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td:last-child,
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .table tbody td:last-child {
+    border-bottom: none;
+  }
+
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td::before,
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .table tbody td::before {
+    content: "";
+    display: block;
+    font-size: 12px;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td[colspan]::before {
+    content: none;
+  }
+
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td[colspan] {
+    text-align: center;
+  }
+
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td.acciones-cell,
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .table tbody td.coord-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-cell .btn,
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-cell .btn-crear,
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .coord-actions button {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  }
+
+  /* ===== Ajuste específico para VictimasLista (vl-page) ===== */
+  .vl-page .acciones-top ~ table{
+    display:block;
+    background:transparent;
+    border:none;
+    box-shadow:none;
+    min-width:0;
+    width:100%;
+  }
+  .vl-page .acciones-top ~ table thead{
+    display:none;
+  }
+  .vl-page .acciones-top ~ table tbody{
+    display:grid;
+    gap:14px;
+    padding:0;
+    margin:0;
+  }
+  .vl-page .acciones-top ~ table tbody tr{
+    display:flex;
+    flex-direction:column;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .vl-page .acciones-top ~ table tbody td{
+    display:block;
+    border-bottom:1px solid var(--border);
+    padding:12px 14px;
+  }
+  .vl-page .acciones-top ~ table tbody td:last-child{
+    border-bottom:none;
+  }
+  .vl-page .acciones-top ~ table tbody td.acciones-cell{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    align-items:flex-start;
+  }
+  .vl-page .acciones-top ~ table tbody td.acciones-cell button{
+    width:100%;
+    min-width:0;
+  }
+  /* Reordenar contenido: estado arriba, luego Copiar ID, luego Ver proceso */
+  .vl-page .acciones-top ~ table tbody td.acciones-cell .badge{
+    order:1;
+  }
+  .vl-page .acciones-top ~ table tbody td.acciones-cell .btn{
+    order:2;
+  }
+  .vl-page .acciones-top ~ table tbody td.acciones-cell .btn-crear{
+    order:3;
+  }
+}

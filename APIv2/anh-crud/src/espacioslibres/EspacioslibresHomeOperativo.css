@@ -1,5 +1,7 @@
-/* ====== Base & variables ====== */
+@import "./overrides.css";
+
 :root[data-theme="dark"]{
+  /* misma paleta que CasoNuevo.css */
   --bg:#0b0f14;
   --panel:#111823;
   --panel-2:#0e1520;
@@ -11,99 +13,143 @@
   --green-600:#16a34a;
   --yellow:#f59e0b;
   --red:#ef4444;
-  --red-600:#dc2626;
   --cyan:#06b6d4;
   --border:#1e293b;
   --shadow:0 8px 24px rgba(0,0,0,.35);
   --radius:14px;
 }
 
-*{ box-sizing:border-box; }
-html, body, #root{ height:100%; margin:0; background:var(--bg); color:var(--text); }
-:focus-visible{ outline:2px solid rgba(59,130,246,.6); outline-offset:2px; }
-
 /* ========= Layout ========= */
-.medica-shell{
+.social-shell{
   min-height:100vh;
   display:grid;
-  grid-template-columns:260px minmax(0, 1fr);
+  grid-template-columns:260px 1fr;
   background:var(--bg);
   color:var(--text);
+  position:relative;
+  overflow:hidden;
 }
+.social-shell.sidebar-closed{ grid-template-columns:0px 1fr; }
 
 /* ========= Sidebar ========= */
-.medica-sidebar{
+.social-sidebar{
   background:var(--sidebar-gradient);
   color:#fff;
   padding:16px;
   display:flex;
   flex-direction:column;
   border-right:1px solid var(--border);
+  transition: transform .25s ease, opacity .25s ease;
+  will-change: transform;
+  grid-column:1;
+  grid-row:1;
 }
-.medica-brand{ font-weight:800; font-size:18px; letter-spacing:.3px; }
-.medica-nav{ display:flex; flex-direction:column; gap:6px; margin-top:12px; }
-
-.nav-item{
-  display:block; width:100%; text-align:left;
-  padding:10px 12px; border-radius:10px;
-  color:#e2e8f0; background:transparent; border:0;
-  text-decoration:none; cursor:pointer;
-  transition: background .15s ease, box-shadow .15s ease, color .15s ease;
+.sidebar-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
 }
+.social-brand{ font-weight:800; font-size:18px; letter-spacing:.3px; }
+.social-nav{ display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+.nav-item{ color:#e2e8f0; text-decoration:none; padding:10px 12px; border-radius:10px; }
 .nav-item:hover{ background:rgba(255,255,255,.06); color:#fff; }
-.nav-item.active{
-  background:rgba(59,130,246,.25); color:#fff;
-  box-shadow:0 0 0 2px rgba(59,130,246,.15) inset;
-}
-.nav-item:focus-visible{ outline:2px solid rgba(59,130,246,.6); outline-offset:2px; }
-
-.medica-userbox{ margin-top:auto; border-top:1px solid rgba(255,255,255,.08); padding-top:12px; }
-.medica-userline{ font-size:12px; margin-bottom:2px; }
-.medica-userline.small{ opacity:.85; }
+.nav-item.active{ background:rgba(59,130,246,.25); color:#fff; box-shadow:0 0 0 2px rgba(59,130,246,.15) inset; }
+.social-userbox{ margin-top:auto; border-top:1px solid rgba(255,255,255,.08); padding-top:12px; }
+.social-userline{ font-size:12px; margin-bottom:2px; }
+.social-userline.small{ opacity:.85; }
 .link-ghost{ margin-top:6px; background:transparent; color:#cbd5e1; border:0; text-decoration:underline; cursor:pointer; }
 .link-ghost:hover{ color:#fff; }
+.social-shell.sidebar-closed .social-sidebar{
+  transform:translateX(-100%);
+  opacity:0;
+  pointer-events:none;
+}
+.social-shell.sidebar-open .social-sidebar{
+  transform:translateX(0);
+  opacity:1;
+  pointer-events:auto;
+}
+.sidebar-backdrop{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  z-index:25;
+}
+.social-shell.sidebar-open .sidebar-backdrop{ display:block; }
 
 /* ========= Main ========= */
-.medica-main{ display:flex; flex-direction:column; min-width:0; }
-.medica-topbar{
+.social-main{
+  display:flex;
+  flex-direction:column;
+  grid-column:2;
+  grid-row:1;
+}
+.social-topbar{
   height:64px; display:flex; align-items:center; justify-content:space-between;
   padding:0 16px; background:var(--panel); border-bottom:1px solid var(--border);
+  gap:12px;
+  position:sticky;
+  top:0;
+  z-index:20;
 }
-.medica-topbar h1{ margin:0; }
-.muted{ color:var(--muted); font-size:14px; }
-.topbar-actions{ display:flex; align-items:center; gap:12px; }
-.medica-content{ padding:16px; display:grid; gap:16px; }
-
-/* ========= Cards & inputs ========= */
-.card{
-  background:var(--panel);
+.sidebar-toggle{
+  display:flex;
+  width:40px;
+  height:40px;
+  border-radius:50%;
   border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:16px;
+  background:rgba(255,255,255,.04);
+  cursor:pointer;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:4px;
+  padding:8px;
   box-shadow:var(--shadow);
+  transition:background .15s ease, transform .15s ease;
 }
+.sidebar-toggle span{
+  width:18px;
+  height:2px;
+  border-radius:999px;
+  background:var(--text);
+  display:block;
+}
+.sidebar-toggle:hover{ background:rgba(255,255,255,.08); transform:translateY(-1px); }
+.muted{ color:var(--muted); font-size:14px; }
+
+/* mejor layout para acciones del topbar (solo fecha ahora) */
+.topbar-actions{ display:flex; align-items:center; gap:12px; }
+
+.social-content{ padding:16px; display:grid; gap:16px; }
+
+/* ========= KPIs ========= */
+.kpi-grid{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; }
+.kpi{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow); }
+.kpi-title{ color:var(--muted); font-size:12px; }
+.kpi-value{ font-size:28px; font-weight:800; }
+
+/* ========= Cards & forms ========= */
+.card{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); }
 .card-header{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .card-header-right{ display:flex; gap:8px; align-items:center; }
-.card-actions{ display:flex; gap:10px; align-items:center; }
+.card-actions{ display:flex; gap:10px; align-items:center; }  /* botón “+ Nuevo caso” */
+.link{ color:var(--primary); text-decoration:underline; }
+.form-row{ display:grid; grid-template-columns:1fr 1fr auto; gap:8px; margin-top:8px; }
 
-.input, .form-row input, .card select, .card textarea{
+.input, .form-row input, .card select{
   background:var(--panel-2); color:var(--text);
-  border:1px solid var(--border); border-radius:10px; padding:10px 12px; outline:none; width:100%;
+  border:1px solid var(--border); border-radius:10px; padding:10px 12px; outline:none;
+  width:100%;
+  max-width:100%;
+  box-sizing:border-box;
 }
 .input::placeholder, .form-row input::placeholder{ color:#8aa0bb; }
-.input:focus, .form-row input:focus, .card select:focus, .card textarea:focus{
+.input:focus, .form-row input:focus, .card select:focus{
   border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.25);
 }
-
-/* Fila/col del formulario */
-.form-row{
-  display:grid;
-  grid-template-columns:repeat(3, minmax(0,1fr));
-  gap:12px;
-  margin-top:12px;
-}
-.form-item{ display:flex; flex-direction:column; gap:6px; }
-.small-label{ color:var(--muted); font-size:12px; }
 
 /* ========= Buttons ========= */
 .btn-primary, .btn-secondary{ border:0; border-radius:10px; cursor:pointer; font-weight:700; }
@@ -111,12 +157,7 @@ html, body, #root{ height:100%; margin:0; background:var(--bg); color:var(--text
 .btn-primary:hover{ background:var(--primary-600); }
 .btn-secondary{ background:var(--cyan); color:#041019; padding:8px 12px; }
 .btn-secondary:hover{ filter:brightness(.95); }
-
-.btn-green, .btn-danger{ border-radius:10px; padding:8px 12px; font-weight:700; cursor:pointer; border:1px solid transparent; }
-.btn-green{ background:var(--green); color:#0b0f14; }
-.btn-green:hover{ background:var(--green-600); color:#051018; }
-.btn-danger{ background:var(--red); color:#fff; }
-.btn-danger:hover{ background:var(--red-600); }
+.link-button{ background:transparent; border:0; color:var(--primary); text-decoration:underline; cursor:pointer; }
 
 /* ========= Alerts & table ========= */
 .alert-info{ background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.35); color:var(--text); padding:10px; border-radius:10px; }
@@ -127,23 +168,7 @@ html, body, #root{ height:100%; margin:0; background:var(--bg); color:var(--text
 .td-center{ text-align:center; padding:12px; border:1px solid var(--border); }
 .pad{ padding:8px; }
 
-/* ========= KPIs ========= */
-.kpi-grid{
-  display:grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap:16px;
-}
-.kpi{
-  background:var(--panel-2);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:14px;
-  box-shadow:var(--shadow);
-}
-.kpi-title{ color:var(--muted); font-size:14px; margin-bottom:8px; }
-.kpi-value{ font-size:34px; font-weight:800; }
-
-/* ========= Badges ========= */
+/* ========= Badges (compatibles con CasoNuevo.css) ========= */
 .badge{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); font-weight:800; }
 .badge.dot::before{ content:""; width:8px; height:8px; border-radius:50%; background:currentColor; display:inline-block; }
 .badge.pendiente{ color:#f87171; }
@@ -153,50 +178,105 @@ html, body, #root{ height:100%; margin:0; background:var(--bg); color:var(--text
 .badge.enviado{ color:#a78bfa; }
 .badge.borrador{ color:#9bb0c9; }
 
-/* ========= Extras usados en el JSX ========= */
-.details-quick{
-  margin-top:10px;
-  background:var(--panel-2);
-  border:1px solid var(--border);
-  border-radius:10px;
-}
-.summary-quick{
-  list-style:none;
-  cursor:pointer;
-  padding:10px 12px;
-  font-weight:700;
-  color:var(--text);
-}
-.details-quick[open] .summary-quick{ border-bottom:1px solid var(--border); }
-.quick-body{ padding:12px; }
+/* ========= Details/summary quick ========= */
+.details-quick{ margin-top:8px; }
+.summary-quick{ cursor:pointer; color:var(--text); }
+.quick-body{ margin-top:8px; }
 
-.link{ color:#93c5fd; text-decoration:underline; }
-.link:hover{ color:#bfdbfe; }
-
-.mt-2{ margin-top:8px; }
-
-/* ========= Breakpoints ========= */
-@media (max-width: 1280px){
-  .medica-shell{ grid-template-columns:240px minmax(0,1fr); }
-  .kpi-grid{ grid-template-columns:repeat(3, minmax(0,1fr)); }
-}
+/* ========= Responsive ========= */
 @media (max-width: 1024px){
-  .medica-shell{ grid-template-columns:220px minmax(0,1fr); }
   .kpi-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
-  .form-row{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .social-shell.sidebar-closed{ grid-template-columns:1fr; }
+  .social-main{ grid-column:1; grid-row:1; }
 }
 @media (max-width: 780px){
-  .medica-shell{ grid-template-columns:1fr; }
-  .medica-sidebar{
-    position:sticky; top:0; z-index:10;
-    border-right:none; border-bottom:1px solid var(--border);
+  .social-shell{ grid-template-columns: 1fr; }
+  .social-main{ position:relative; z-index:10; }
+  .social-sidebar{
+    position:fixed;
+    top:0; left:0; bottom:0;
+    width:260px;
+    max-width:80vw;
+    z-index:30;
+    border-right:none;
+    border-bottom:1px solid var(--border);
+    box-shadow:var(--shadow);
   }
-  .medica-topbar{ height:auto; padding:12px 16px; gap:8px; flex-wrap:wrap; }
-  .topbar-actions{ width:100%; justify-content:flex-end; }
-  .medica-sidebar .nav-item{ padding:12px 14px; }
-  .kpi-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
-  .form-row{ grid-template-columns:1fr; }
-}
-@media (max-width: 480px){
+  .social-shell.sidebar-open .social-sidebar{
+    transform:translateX(0) !important;
+    opacity:1 !important;
+    pointer-events:auto;
+    z-index:40;
+  }
+  .social-shell.sidebar-open .sidebar-backdrop{ display:block; }
+  .social-shell.sidebar-closed .social-sidebar{
+    transform:translateX(-100%);
+    opacity:0;
+    pointer-events:none;
+  }
+  .social-shell.sidebar-open{ overflow:hidden; }
   .kpi-grid{ grid-template-columns:1fr; }
+  .form-row{ grid-template-columns:1fr; }
+  .social-topbar{ height:auto; padding:12px 16px; gap:8px; flex-wrap:wrap; }
+  .topbar-actions{ width:100%; justify-content:flex-end; }
+}
+
+/* ===== Helpers para el formulario de "Registrar víctima" en el Dashboard ===== */
+.card .form-item{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.small-label{
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 4px;
+  letter-spacing: .2px;
+}
+
+/* opcional: hace que el date use tema oscuro */
+.card input[type="date"]{
+  color-scheme: dark;
+}
+
+/* ===== Overrides Social (inline para asegurar carga) ===== */
+/* Fila Nombres/Apellidos/Sexo más compacta */
+:is(.social-shell, .social-main, .victimas-page) .form-row-identidad{
+  grid-template-columns: minmax(0,3fr) minmax(0,3fr) minmax(190px,1.1fr);
+  column-gap: 6px;
+}
+:is(.social-shell, .social-main, .victimas-page) .form-row-identidad select{
+  width: auto;
+  min-width: 190px;
+  max-width: 260px;
+  justify-self: start;
+}
+
+/* Checkbox alineado en Caso Nuevo (social) */
+.cn-wrap-social .cn-check{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-height: 46px;
+  width: fit-content;
+  margin-top: 0;
+}
+.cn-wrap-social .cn-check input{
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+/* Topbar con espacio para el switch de tema flotante */
+.social-topbar[data-avoid-fab]{
+  padding-right: clamp(180px, 24vw, var(--fab-safe-pr, 260px)) !important;
+}
+@media (max-width: 720px){
+  .social-topbar[data-avoid-fab]{ padding-right: max(130px, 18vw) !important; }
 }

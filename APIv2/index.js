@@ -53,6 +53,15 @@ function setTableBorders(ws, r1, c1, r2, c2) {
   }
 }
 
+function authIds(req) {
+  const u = req.user || {};
+  const roleId = Number(u.role_id ?? u.role);
+  const areaId = Number(u.area_id ?? u.area);
+  const userId = Number(u.id);
+  return { roleId, areaId, userId };
+}
+
+
 // Normaliza y ordena una lista de {label,total} según un arreglo de orden deseado.
 // Agrega etiquetas que no estén en el orden al final.
 function normalizeByOrder(list, ORDER) {
@@ -306,7 +315,6 @@ const ORD_REF_EXTERNA = [
 const ORD_REF_INTERNA = ['Área Social','Área Psicológica','Área Médica','Área Legal','Albergue'];
 
 const ORD_AREA_RESIDENCIA = ['Colonia','Barrio Popular','Asentamiento','Zonas','Municipio','Aldea','Caserío','Cantón'];
-
 
 // 🔸 Helpers de seguridad (colocar una sola vez)
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
@@ -581,6 +589,29 @@ async function addHistorial(casoId, usuarioId, accion, estadoDesde, estadoHasta,
     console.error('⚠️ No se pudo registrar historial:', e.message);
   }
 }
+
+async function applyResidenciaCatalogoToBody(colsCasos, body, db) {
+  const txt = String(body?.residencia ?? body?.residencia_texto ?? '').trim();
+  if (!txt) return;
+
+  // Mantener texto para compatibilidad (front no muestra ID)
+  if (colsCasos?.has('residencia')) body.residencia = txt;
+
+  // Si existe la FK, resolver
+  if (!colsCasos?.has('residencia_id')) return;
+
+  const r = await db.query(
+    `SELECT id
+     FROM residencias_catalogo
+     WHERE activo = TRUE
+       AND LOWER(TRIM(nombre)) = LOWER(TRIM($1))
+     LIMIT 1`,
+    [txt]
+  );
+
+  if (r.rows?.[0]?.id) body.residencia_id = Number(r.rows[0].id);
+}
+
 
 function requireRoles(...roles) {
   return (req, res, next) => {
@@ -916,16 +947,23 @@ app.post('/apiv2/admin/create-user', authMiddleware, async (req, res) => {
 
     // Normalización de entrada
     const body = req.body || {};
-    const username         = String(body.username || '').trim();
-    const nombre_completo  = String(body.nombre_completo || '').trim();
-    const emailRaw         = String(body.email || '').trim();
-    const role_id          = Number(body.role_id);
-    const area_id          = Number(body.area_id);
+
+    let username        = String(body.username || '').trim();
+    const nombre_completo = String(body.nombre_completo || '').trim();
+    const emailRaw        = String(body.email || '').trim();
+    const role_id         = Number(body.role_id);
+
+    // ✅ area_id puede ser null/""/undefined para rol 1
+    let area_id =
+      body.area_id === null || body.area_id === undefined || body.area_id === ''
+        ? null
+        : Number(body.area_id);
+
     const password_default = body.password_default ? String(body.password_default) : null;
 
-    // Requeridos
-    if (!username || !nombre_completo || !emailRaw || !role_id || !area_id) {
-      return res.status(400).json({ error: 'Todos los campos son obligatorios: username, nombre_completo, email, role_id, area_id' });
+    // Requeridos mínimos (area depende del rol)
+    if (!nombre_completo || !emailRaw || !role_id) {
+      return res.status(400).json({ error: 'Faltan campos: nombre_completo, email, role_id' });
     }
 
     // Prohibir asignar rol 4 (Administrador)
@@ -933,31 +971,78 @@ app.post('/apiv2/admin/create-user', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'No se permite asignar el rol Administrador' });
     }
 
+    // ✅ Coordinación General (rol 1) NO lleva área
+    if (role_id === 1) {
+      area_id = null;
+    } else {
+      // Roles 2/3 deben llevar área
+      if (!Number.isInteger(area_id) || area_id <= 0) {
+        return res.status(400).json({ error: 'area_id es obligatorio para este rol' });
+      }
+    }
+
     // Validaciones básicas
-    if (username.length < 3) return res.status(400).json({ error: 'El username debe tener al menos 3 caracteres' });
     const email = emailRaw.toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Email inválido' });
-    if (!Number.isInteger(role_id) || role_id <= 0) return res.status(400).json({ error: 'role_id inválido' });
-    if (!Number.isInteger(area_id) || area_id <= 0) return res.status(400).json({ error: 'area_id inválido' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Email inválido' });
+    }
+    if (!Number.isInteger(role_id) || role_id <= 0) {
+      return res.status(400).json({ error: 'role_id inválido' });
+    }
 
-    // Verificar existencia de role y área
-    const [roleQ, areaQ] = await Promise.all([
-      pool.query('SELECT 1 FROM roles  WHERE id = $1 LIMIT 1', [role_id]),
-      pool.query('SELECT 1 FROM areas  WHERE id = $1 LIMIT 1', [area_id]),
-    ]);
+    // ✅ Generar username si viene vacío (no rompe si el front lo manda)
+    function normalizeUser(s) {
+      return String(s || '')
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9._-]+/g, '')
+        .replace(/^[_\-.]+|[_\-.]+$/g, '');
+    }
+
+    function generateUsernameFromFullName(full) {
+      const parts = String(full).trim().split(/\s+/).filter(Boolean);
+      const first = parts[0] || 'user';
+      const last  = parts[parts.length - 1] || 'user';
+      return normalizeUser(`${first}${last}`) || `user${Date.now()}`;
+    }
+
+    if (!username) {
+      username = generateUsernameFromFullName(nombre_completo);
+    } else {
+      username = username.replace(/\s+/g, '');
+    }
+
+    if (username.length < 3) {
+      return res.status(400).json({ error: 'El username debe tener al menos 3 caracteres' });
+    }
+
+    // Verificar existencia de role y área (área solo si aplica)
+    const roleQ = await pool.query('SELECT 1 FROM roles WHERE id = $1 LIMIT 1', [role_id]);
     if (!roleQ.rows[0]) return res.status(400).json({ error: 'role_id no existe' });
-    if (!areaQ.rows[0]) return res.status(400).json({ error: 'area_id no existe' });
 
-    // Unicidad username/email
+    if (role_id !== 1) {
+      const areaQ = await pool.query('SELECT 1 FROM areas WHERE id = $1 LIMIT 1', [area_id]);
+      if (!areaQ.rows[0]) return res.status(400).json({ error: 'area_id no existe' });
+    }
+
+    // ✅ Unicidad:
+    // - username sigue siendo único global
+    // - email NO es único global → es único por (email + role_id + area_id)
     const existsQ = await pool.query(
       `SELECT 
          (SELECT 1 FROM usuarios WHERE username = $1 LIMIT 1) AS u,
-         (SELECT 1 FROM usuarios WHERE lower(email) = $2 LIMIT 1) AS e`,
-      [username, email]
+         (SELECT 1
+            FROM usuarios
+           WHERE lower(email) = $2
+             AND role_id = $3
+             AND COALESCE(area_id, 0) = COALESCE($4, 0)
+           LIMIT 1) AS e`,
+      [username, email, role_id, area_id]
     );
+
     const exists = existsQ.rows?.[0];
     if (exists?.u) return res.status(400).json({ error: 'El username ya existe' });
-    if (exists?.e) return res.status(400).json({ error: 'El email ya existe' });
+    if (exists?.e) return res.status(409).json({ error: 'Ya existe un usuario con este correo para ese rol y esa área' });
 
     // Contraseña temporal
     function generateTempPassword(len = 10) {
@@ -975,6 +1060,7 @@ app.post('/apiv2/admin/create-user', authMiddleware, async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6)
       RETURNING id, email
     `;
+
     const { rows } = await pool.query(insertQ, [
       username, email, passwordHash, nombre_completo, area_id, role_id
     ]);
@@ -995,29 +1081,28 @@ app.post('/apiv2/admin/create-user', authMiddleware, async (req, res) => {
     // Generar token nuevo
     const token = randomToken(32);
     const tokenHash = sha256(token);
-   const expiresAt = minutesFromNow(RESET_TOKEN_TTL_MIN); // 15 minutos
+    const expiresAt = minutesFromNow(RESET_TOKEN_TTL_MIN); // 15 minutos
     const ip = getClientIp(req);
     const ua = req.headers['user-agent'] || null;
 
-   // ⬇️ Intento 1: insertar con columna token; fallback si el esquema no la tiene o si el tipo no coincide
-try {
-  await pool.query(
-    `INSERT INTO password_reset_tokens(user_id, token, token_hash, expires_at, requested_ip, user_agent)
-     VALUES ($1,$2,$3,$4,$5,$6)`,
-    [created.id, token, tokenHash, expiresAt, ip, ua]
-  );
-} catch (e) {
-  if (e?.code === '42703' || e?.code === '22P02') {
-    await pool.query(
-      `INSERT INTO password_reset_tokens(user_id, token_hash, expires_at, requested_ip, user_agent)
-       VALUES ($1,$2,$3,$4,$5)`,
-      [created.id, tokenHash, expiresAt, ip, ua]
-    );
-  } else {
-    throw e;
-  }
-}
-
+    // ⬇️ Intento 1: insertar con columna token; fallback si el esquema no la tiene o si el tipo no coincide
+    try {
+      await pool.query(
+        `INSERT INTO password_reset_tokens(user_id, token, token_hash, expires_at, requested_ip, user_agent)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [created.id, token, tokenHash, expiresAt, ip, ua]
+      );
+    } catch (e) {
+      if (e?.code === '42703' || e?.code === '22P02') {
+        await pool.query(
+          `INSERT INTO password_reset_tokens(user_id, token_hash, expires_at, requested_ip, user_agent)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [created.id, tokenHash, expiresAt, ip, ua]
+        );
+      } else {
+        throw e;
+      }
+    }
 
     // Enlace para establecer contraseña
     const resetUrl = `${APP_URL.replace(/\/+$/,'')}/reset-password?token=${token}`;
@@ -1035,6 +1120,7 @@ try {
   } catch (e) {
     console.error('admin.create-user:', e);
     if (e?.code === '23505') { // unique_violation
+      // Ojo: si tu BD tiene UNIQUE(email) global, aquí seguirá tronando.
       return res.status(400).json({ error: 'Usuario o correo ya existe' });
     }
     return res.status(500).json({ error: 'Error al crear usuario' });
@@ -1117,22 +1203,43 @@ app.put('/apiv2/admin/users/:id', authMiddleware, async (req, res) => {
   const email           = String(body.email || '').trim().toLowerCase();
   const nombre_completo = String(body.nombre_completo || '').trim();
   const role_id         = Number(body.role_id);
-  const area_id         = Number(body.area_id);
 
-  if (!email || !nombre_completo || !role_id || !area_id)
+  let area_id =
+    body.area_id === null || body.area_id === undefined || body.area_id === ''
+      ? null
+      : Number(body.area_id);
+
+  if (!email || !nombre_completo || !role_id)
     return res.status(400).json({ error: 'Faltan campos requeridos' });
+
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return res.status(400).json({ error: 'Email inválido' });
+
   if (role_id === 4)
     return res.status(400).json({ error: 'No se permite asignar el rol Administrador' });
 
+  // ✅ Rol 1 no lleva área
+  if (role_id === 1) {
+    area_id = null;
+  } else {
+    if (!Number.isInteger(area_id) || area_id <= 0) {
+      return res.status(400).json({ error: 'area_id es obligatorio para este rol' });
+    }
+  }
+
   try {
-    // email único (si cambió)
+    // ✅ email único por (email + role_id + area_id), excluyendo el propio id
     const { rows: ex } = await pool.query(
-      `SELECT 1 FROM usuarios WHERE lower(email) = $1 AND id <> $2 LIMIT 1`,
-      [email, id]
+      `SELECT 1
+         FROM usuarios
+        WHERE lower(email) = $1
+          AND role_id = $2
+          AND COALESCE(area_id, 0) = COALESCE($3, 0)
+          AND id <> $4
+        LIMIT 1`,
+      [email, role_id, area_id, id]
     );
-    if (ex[0]) return res.status(400).json({ error: 'El email ya existe' });
+    if (ex[0]) return res.status(409).json({ error: 'Ya existe un usuario con este correo para ese rol y esa área' });
 
     await pool.query(
       `UPDATE usuarios
@@ -1183,7 +1290,9 @@ const catalogos = {
   roles:             'SELECT * FROM roles ORDER BY id',
   'estados-civiles': 'SELECT * FROM estados_civiles ORDER BY id',
   etnias:            'SELECT * FROM etnias ORDER BY id',
-  escolaridades:     'SELECT * FROM escolaridades ORDER BY id',
+  escolaridades:     `SELECT id, nombre FROM escolaridades ORDER BY CASE WHEN lower(nombre) = 'sabe leer y escribir' THEN 0 ELSE 1 END,
+    id`,
+  ocupaciones: `SELECT id, nombre FROM public.ocupaciones_catalogo WHERE activo = TRUE ORDER BY nombre`,
   'tipos-violencia': 'SELECT * FROM tipos_violencia ORDER BY id',
   'medios-agresion': 'SELECT * FROM medios_agresion ORDER BY id',
   'relaciones-agresor': 'SELECT * FROM relaciones_agresor ORDER BY id',
@@ -1194,6 +1303,50 @@ const catalogos = {
   departamentos:     'SELECT * FROM departamentos ORDER BY id',
   municipios:        'SELECT id, departamento_id, nombre FROM municipios ORDER BY departamento_id, nombre',
 };
+
+// ✅ Catálogo de ocupaciones (crear nuevo item, sin duplicados)
+app.post('/apiv2/catalogos/ocupaciones', authMiddleware, async (req, res) => {
+  try {
+    const nombre = String(req.body?.nombre || '').trim();
+    if (!nombre) return res.status(400).json({ error: 'nombre es obligatorio' });
+
+    const { rows } = await pool.query(
+      `INSERT INTO public.ocupaciones_catalogo (nombre)
+       VALUES ($1)
+       ON CONFLICT ON CONSTRAINT ocupaciones_catalogo_nombre_key_uk DO NOTHING
+       RETURNING id, nombre`,
+      [nombre]
+    );
+
+    // Si no insertó, es porque ya existía (por el nombre_key)
+    if (!rows[0]) {
+      return res.status(409).json({ error: 'La ocupación ya existe' });
+    }
+
+    return res.status(201).json(rows[0]);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: 'Error al crear ocupación' });
+  }
+});
+
+
+// ✅ Catálogo de residencias (dropdown)
+app.get('/apiv2/catalogos/residencias', authMiddleware, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT id, nombre
+      FROM residencias_catalogo
+      WHERE activo = TRUE
+      ORDER BY nombre ASC
+    `);
+    return res.json(rows);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: 'Error al obtener residencias' });
+  }
+});
+
 app.get('/apiv2/catalogos/:cat', async (req, res) => {
   const sql = catalogos[req.params.cat];
   if (!sql) return res.status(404).json({ error: 'Catálogo no encontrado' });
@@ -1204,6 +1357,9 @@ app.get('/apiv2/catalogos/:cat', async (req, res) => {
     console.error(err); res.status(500).json({ error: 'Error en el servidor' });
   }
 });
+
+
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 🔁 Compatibilidad con rutas legacy usadas por el front actual
@@ -1271,31 +1427,62 @@ app.put('/apiv2/usuarios/:id', authMiddleware, async (req, res) => {
     const nombre_completo = String(body.nombre_completo || '').trim();
     const emailRaw        = String(body.email || '').trim();
     const role_id         = Number(body.role_id);
-    const area_id         = Number(body.area_id);
 
-    if (!nombre_completo || !emailRaw || !role_id || !area_id) {
-      return res.status(400).json({ error: 'nombre_completo, email, role_id y area_id son obligatorios' });
+    // ✅ area_id: permitir null/""/undefined para Coordinación General (rol 1)
+    let area_id =
+      body.area_id === null || body.area_id === undefined || body.area_id === ''
+        ? null
+        : Number(body.area_id);
+
+    // ✅ ahora area_id NO es obligatorio siempre
+    if (!nombre_completo || !emailRaw || !role_id) {
+      return res.status(400).json({ error: 'nombre_completo, email y role_id son obligatorios' });
     }
+
     const email = emailRaw.toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: 'Email inválido' });
     }
-    if (role_id === 4) return res.status(400).json({ error: 'No se permite asignar el rol Administrador' });
 
-    // verificar existencia de rol/área
-    const [rQ, aQ] = await Promise.all([
-      pool.query('SELECT 1 FROM roles  WHERE id = $1 LIMIT 1', [role_id]),
-      pool.query('SELECT 1 FROM areas  WHERE id = $1 LIMIT 1', [area_id]),
-    ]);
+    if (role_id === 4) {
+      return res.status(400).json({ error: 'No se permite asignar el rol Administrador' });
+    }
+
+    // ✅ Coordinación General NO lleva área
+    if (role_id === 1) area_id = null;
+
+    // ✅ Roles 2 y 3 (y cualquiera distinto de 1) deben llevar área
+    if (role_id !== 1) {
+      if (!Number.isInteger(area_id) || area_id <= 0) {
+        return res.status(400).json({ error: 'area_id es obligatorio para este rol' });
+      }
+    }
+
+    // verificar existencia de rol
+    const rQ = await pool.query('SELECT 1 FROM roles WHERE id = $1 LIMIT 1', [role_id]);
     if (!rQ.rows[0]) return res.status(400).json({ error: 'role_id no existe' });
-    if (!aQ.rows[0]) return res.status(400).json({ error: 'area_id no existe' });
 
-    // email único (excluye el propio id)
+    // verificar existencia de área SOLO si aplica
+    if (role_id !== 1) {
+      const aQ = await pool.query('SELECT 1 FROM areas WHERE id = $1 LIMIT 1', [area_id]);
+      if (!aQ.rows[0]) return res.status(400).json({ error: 'area_id no existe' });
+    }
+
+    // ✅ NUEVA regla: el correo puede repetirse en otro rol o en otra área,
+    // pero NO puede repetirse con el MISMO rol y la MISMA área (excluye el propio id)
     const ex = await pool.query(
-      'SELECT 1 FROM usuarios WHERE lower(email) = $1 AND id <> $2 LIMIT 1',
-      [email, id]
+      `SELECT 1
+         FROM usuarios
+        WHERE lower(email) = $1
+          AND role_id = $2
+          AND COALESCE(area_id, 0) = COALESCE($3, 0)
+          AND id <> $4
+        LIMIT 1`,
+      [email, role_id, area_id, id]
     );
-    if (ex.rows[0]) return res.status(400).json({ error: 'El email ya existe' });
+    if (ex.rows[0]) {
+      return res.status(409).json({ error: 'Ya existe un usuario con este correo para ese rol y esa área' });
+    }
 
     await pool.query(
       `UPDATE usuarios
@@ -1757,151 +1944,288 @@ function normalizaPaisDesdeTexto(txt='') {
   ]);
   return map.get(s) || String(txt).trim();
 }
+/* ─────────────────────────────────────────────────────────────
+ * Helpers para compatibilidad de columnas en victimas
+ * Tu BD: created_por, area_registro_id
+ * Legacy: creado_por, area_id
+ * ───────────────────────────────────────────────────────────── */
+function pickVictimasScopeCols(cols) {
+  const creadorCol = cols.has('creado_por')
+    ? 'creado_por'
+    : (cols.has('created_por') ? 'created_por' : null);
+
+  const areaCol = cols.has('area_id')
+    ? 'area_id'
+    : (cols.has('area_registro_id') ? 'area_registro_id' : null);
+
+  return { creadorCol, areaCol };
+}
+
+async function assertVictimaAccess(req, victimaId) {
+  const { roleId, areaId, userId } = authIds(req);
+
+  const cols = await getTableCols('victimas');
+  const { creadorCol, areaCol } = pickVictimasScopeCols(cols);
+
+  // Para aplicar seguridad real, estas columnas deben existir (en alguna variante)
+  if (!creadorCol || !areaCol) {
+    return {
+      ok: false,
+      code: 500,
+      msg: 'Faltan columnas de trazabilidad en victimas (area_id/area_registro_id y creado_por/created_por). Migre BD.',
+    };
+  }
+
+  // OJO: alias para NO tocar el resto de tu lógica (v.area_id / v.creado_por)
+  const { rows } = await pool.query(
+    `SELECT id, ${areaCol} AS area_id, ${creadorCol} AS creado_por
+     FROM victimas
+     WHERE id = $1`,
+    [victimaId]
+  );
+
+  if (!rows[0]) return { ok: false, code: 404, msg: 'Víctima no encontrada' };
+  const v = rows[0];
+
+  // CG = todo
+  if (roleId === ROLES.COORD_GENERAL) return { ok: true, victima: v };
+
+  // Coord Área = solo su área
+  if (roleId === ROLES.COORD_AREA) {
+    if (Number(v.area_id) !== Number(areaId)) {
+      return { ok: false, code: 403, msg: 'No autorizado' };
+    }
+    return { ok: true, victima: v };
+  }
+
+  // Operativo = solo su área y creadas por él
+  if (roleId === ROLES.OPERATIVO) {
+    const ok =
+      Number(v.area_id) === Number(areaId) &&
+      Number(v.creado_por) === Number(userId);
+
+    if (!ok) return { ok: false, code: 403, msg: 'No autorizado' };
+    return { ok: true, victima: v };
+  }
+
+  return { ok: false, code: 403, msg: 'Rol no autorizado' };
+}
+
 
 // ─────────────────────────────────────────────────────────────
 // 👥 Víctimas (CRUD) – PROTECTED
 // ─────────────────────────────────────────────────────────────
-
 app.get('/apiv2/operativa/victimas', authMiddleware, async (req, res) => {
   const client = await pool.connect();
   try {
-   const { role } = req.user || {};
-const isCG = Number(role) === ROLES.COORD_GENERAL; // 1 = Coordinación General
+    const { roleId, areaId, userId } = authIds(req);
 
-    // --- resolver área desde query o JWT (area_id numérico o area string) ---
-    const mapArea = (val) => {
-      if (val == null) return null;
-      const s = String(val).trim().toLowerCase();
-      if (/^\d+$/.test(s)) return parseInt(s, 10);
-      const m = {
-        'social': 1, 's': 1, 'soc': 1,
-        'legal': 2, 'l': 2,
-        'medica': 3, 'médica': 3, 'm': 3, 'med': 3,
-        'psicologica': 4, 'psicológica': 4, 'psi': 4, 'p': 4,
-        'albergue': 5, 'a': 5
-      };
-      return m[s] ?? null;
-    };
+    const cols = await getTableCols('victimas');
+    const { creadorCol, areaCol } = pickVictimasScopeCols(cols);
 
-    const qArea   = mapArea(req.query.area ?? req.query.area_id);
-    const jwtArea = mapArea((req.user && (req.user.area_id ?? req.user.area)) ?? null);
+    const hasCreador = !!creadorCol;
+    const hasArea    = !!areaCol;
 
-    // No-CG: usa el área del JWT obligatoriamente.
-    // CG: si viene ?area=... úsala; si no, usa la del JWT (si existe); si no, ve todo.
-    const effectiveAreaId = !isCG ? (jwtArea ?? null) : (qArea ?? jwtArea ?? null);
-
-    const q      = (req.query.q || '').trim();
+    const q      = String(req.query.q || '').trim();
     const limit  = Math.min(parseInt(req.query.limit  || '50', 10), 200);
     const offset = parseInt(req.query.offset || '0', 10);
 
-    // Detectar si existe victimas.area_registro_id (para ampliar el filtro)
-    const cols = await getTableCols('victimas');
-    const hasAreaReg = cols.has('area_registro_id');
-
-    const whereParts = [];
+    const where = [];
     const params = [];
-    let idx = 1;
+    let i = 1;
 
-    if (effectiveAreaId != null) {
-      if (hasAreaReg) {
-        whereParts.push(`(v.area_registro_id = $${idx} OR c.area_id = $${idx})`);
-      } else {
-        whereParts.push(`(c.area_id = $${idx})`);
+    // ✅ reglas:
+    // - Operativo: solo sus víctimas
+    // - Coord Área: todas las víctimas del área
+    // - CG: todo (y si manda ?area_id o ?area, filtra)
+    if (roleId === 3) { // Operativo
+      if (hasCreador) { where.push(`v.${creadorCol} = $${i++}`); params.push(userId); }
+      if (hasArea)    { where.push(`v.${areaCol} = $${i++}`);    params.push(areaId); }
+    } else if (roleId === 2) { // Coord Área
+      if (hasArea) { where.push(`v.${areaCol} = $${i++}`); params.push(areaId); }
+    } else if (roleId === 1) { // CG
+      const areaFilter = req.query.area_id ?? req.query.area;
+      const nArea = areaFilter != null ? Number(areaFilter) : null;
+      if (Number.isFinite(nArea) && hasArea) {
+        where.push(`v.${areaCol} = $${i++}`); params.push(nArea);
       }
-      params.push(effectiveAreaId);
-      idx++;
-    } else {
-      whereParts.push('TRUE');
     }
 
     if (q) {
-      whereParts.push(`
+      where.push(`
         (
-          COALESCE(NULLIF(TRIM(v.nombre),''), NULLIF(TRIM(CONCAT_WS(' ', v.primer_nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido)), '')) ILIKE $${idx}
-          OR COALESCE(v.telefono,'') ILIKE $${idx}
-          OR COALESCE(v.celular,'')  ILIKE $${idx}
+          COALESCE(NULLIF(TRIM(v.nombre),''), NULLIF(TRIM(CONCAT_WS(' ', v.primer_nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido)), '')) ILIKE $${i}
+          OR COALESCE(v.telefono,'') ILIKE $${i}
+          OR COALESCE(v.celular,'')  ILIKE $${i}
         )
       `);
       params.push(`%${q}%`);
-      idx++;
+      i++;
     }
+
+    if (!where.length) where.push('TRUE');
 
     params.push(limit, offset);
 
     const sql = `
-      SELECT DISTINCT
+      SELECT
         v.id,
-        -- compatibilidad: nombre y nombre_completo
-        COALESCE(NULLIF(TRIM(v.nombre),''), NULLIF(TRIM(CONCAT_WS(' ', v.primer_nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido)),''))
-          AS nombre,
-        COALESCE(v.nombre, CONCAT_WS(' ', v.primer_nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido))
-          AS nombre_completo,
-        COALESCE(NULLIF(v.celular,''), NULLIF(v.telefono,''), '') AS telefono,
-        '-' AS correo
+        COALESCE(NULLIF(TRIM(v.nombre),''), NULLIF(TRIM(CONCAT_WS(' ', v.primer_nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido)),'')) AS nombre,
+        COALESCE(NULLIF(TRIM(v.nombre),''), NULLIF(TRIM(CONCAT_WS(' ', v.primer_nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido)),'')) AS nombre_completo,
+        COALESCE(NULLIF(v.celular,''), NULLIF(v.telefono,''), '') AS telefono
       FROM victimas v
-      LEFT JOIN casos c ON c.victima_id = v.id
-      WHERE ${whereParts.join(' AND ')}
+      WHERE ${where.join(' AND ')}
       ORDER BY v.id DESC
-      LIMIT $${idx}::int OFFSET $${idx + 1}::int;
+      LIMIT $${i}::int OFFSET $${i + 1}::int;
     `;
 
     const { rows } = await client.query(sql, params);
     res.json({ ok: true, data: rows });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ ok: false, error: 'ERR_LISTAR_VICTIMAS_AREA' });
+    res.status(500).json({ ok: false, error: 'ERR_LISTAR_VICTIMAS' });
   } finally {
     client.release();
   }
 });
 
+app.get('/apiv2/victimas', authMiddleware, async (req, res) => {
+  try {
+    const { roleId, areaId, userId } = authIds(req);
 
+    const cols = await getTableCols('victimas');
+    const { creadorCol, areaCol } = pickVictimasScopeCols(cols);
 
-app.get('/apiv2/victimas', authMiddleware, async (_req, res) => {
-  const { rows } = await pool.query('SELECT * FROM victimas ORDER BY id DESC');
-  res.json(rows);
+    const hasCreador = !!creadorCol;
+    const hasArea = !!areaCol;
+
+    // Seguridad: si el rol requiere filtros pero faltan columnas, mejor fallar duro.
+    if (roleId === ROLES.OPERATIVO && (!hasCreador || !hasArea)) {
+      return res.status(500).json({ error: 'Faltan columnas de trazabilidad en victimas. Migre BD.' });
+    }
+    if (roleId === ROLES.COORD_AREA && !hasArea) {
+      return res.status(500).json({ error: 'Falta columna de área en victimas. Migre BD.' });
+    }
+
+    let where = 'TRUE';
+    const params = [];
+
+    if (roleId === ROLES.OPERATIVO) {
+      where = `${creadorCol} = $1 AND ${areaCol} = $2`;
+      params.push(userId, areaId);
+    } else if (roleId === ROLES.COORD_AREA) {
+      where = `${areaCol} = $1`;
+      params.push(areaId);
+    } else if (roleId === ROLES.COORD_GENERAL) {
+      // CG puede filtrar por área si manda ?area_id o ?area
+      const areaFilter = req.query.area_id ?? req.query.area;
+      const nArea = areaFilter != null ? Number(areaFilter) : null;
+      if (Number.isFinite(nArea) && hasArea) {
+        where = `${areaCol} = $1`;
+        params.push(nArea);
+      }
+    } else {
+      return res.status(403).json({ error: 'Rol no autorizado' });
+    }
+
+    const sql = `SELECT * FROM victimas WHERE ${where} ORDER BY id DESC`;
+    const { rows } = await pool.query(sql, params);
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Error listando víctimas' });
+  }
 });
 
 app.get('/apiv2/victimas/:id', authMiddleware, async (req, res) => {
   try {
-    const { id } = req.params;
-    const sql = `
-  SELECT
+    const { roleId, areaId, userId } = authIds(req);
+
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const cols = await getTableCols('victimas');
+    const { creadorCol, areaCol } = pickVictimasScopeCols(cols);
+
+    const hasCreador = !!creadorCol;
+    const hasArea    = !!areaCol;
+
+    const { rows } = await pool.query(
+      `
+SELECT
   v.*,
-  mr.nombre  AS municipio_residencia_nombre,
-  drr.nombre AS departamento_residencia_nombre,
-  mo.nombre  AS municipio_origen_nombre,
-  dpo.nombre AS departamento_origen_nombre,
-  COALESCE(NULLIF(TRIM(v.extra->>'origen_texto'), ''), NULL) AS origen_texto,
   COALESCE(
-    NULLIF(TRIM(CONCAT_WS(', ', mo.nombre, dpo.nombre)), ''),
-    NULLIF(TRIM(v.extra->>'origen_texto'), '')
+    CONCAT(mo.nombre, '/', d.nombre),
+    v.extra->>'origen_texto'
   ) AS lugar_origen
 FROM victimas v
-LEFT JOIN municipios    mr  ON mr.id  = v.municipio_residencia_id
-LEFT JOIN departamentos drr ON drr.id = mr.departamento_id
-LEFT JOIN municipios    mo  ON mo.id  = v.municipio_origen_id
-LEFT JOIN departamentos dpo ON dpo.id = mo.departamento_id
+LEFT JOIN municipios mo ON mo.id = v.municipio_origen_id
+LEFT JOIN departamentos d ON d.id = mo.departamento_id
 WHERE v.id = $1
 LIMIT 1
+`,
+      [id]
+    );
 
-    `;
-    const { rows } = await pool.query(sql, [id]);
-    if (!rows[0]) return res.status(404).json({ error: 'Víctima no encontrada' });
-    res.set('Cache-Control', 'no-store'); // evita 304 en dev
-    res.json(rows[0]);
+    if (!rows.length) return res.status(404).json({ error: 'Víctima no encontrada' });
+
+    const v = rows[0];
+
+    const rId = Number(roleId);
+    const aId = Number(areaId);
+    const uId = Number(userId);
+
+    // CG / Admin
+    if (rId === 1) {
+      res.set('Cache-Control', 'no-store');
+      return res.json(v);
+    }
+
+    const vArea    = (hasArea && v?.[areaCol] != null) ? Number(v[areaCol]) : null;
+    const vCreador = (hasCreador && v?.[creadorCol] != null) ? Number(v[creadorCol]) : null;
+
+    const sameArea  = (vArea != null && Number.isFinite(aId) && vArea === aId);
+    const isCreator = (vCreador != null && Number.isFinite(uId) && vCreador === uId);
+
+    // Coord. de Área: solo su área
+    if (rId === 2) {
+      if (!hasArea || !sameArea) return res.status(403).json({ error: 'No autorizado' });
+      res.set('Cache-Control', 'no-store');
+      return res.json(v);
+    }
+
+    // Operativa: permite si es su área O si la creó
+    if (rId === 3) {
+      if (hasArea && hasCreador) {
+        if (!(sameArea || isCreator)) return res.status(403).json({ error: 'No autorizado' });
+      } else if (hasArea) {
+        if (!sameArea) return res.status(403).json({ error: 'No autorizado' });
+      } else if (hasCreador) {
+        if (!isCreator) return res.status(403).json({ error: 'No autorizado' });
+      } else {
+        return res.status(403).json({ error: 'No autorizado' });
+      }
+
+      res.set('Cache-Control', 'no-store');
+      return res.json(v);
+    }
+
+    return res.status(403).json({ error: 'No autorizado' });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: 'Error al obtener víctima' });
+    return res.status(500).json({ error: 'Error al obtener víctima' });
   }
 });
-
-// POST con trazabilidad de quién/área la registró (si existen columnas)
 app.post('/apiv2/victimas', authMiddleware, async (req, res) => {
   try {
     const cols = await getTableCols('victimas');
     const b = req.body || {};
-    const { id: userId, area_id: userAreaId } = req.user || {};
+
+    const { roleId, areaId, userId } = authIds(req); // ✅ fuente correcta
+
+    const { creadorCol, areaCol } = pickVictimasScopeCols(cols);
 
     const { pn, sn, pa, sa, full } = splitNombreApellidos(b.nombres, b.apellidos);
     const payload = {};
@@ -1922,7 +2246,69 @@ app.post('/apiv2/victimas', authMiddleware, async (req, res) => {
     putIf(cols, payload, 'estado_civil_id',  b.estado_civil_id ?? b.estado_civil);
     putIf(cols, payload, 'escolaridad_id',   b.escolaridad_id  ?? b.escolaridad);
     putIf(cols, payload, 'etnia_id',         b.etnia_id        ?? b.etnia);
-    putIf(cols, payload, 'ocupacion',        b.ocupacion ?? b.actividad ?? b.oficio ?? b.profesion);
+
+    // ✅ OCUPACIÓN / ACTIVIDAD: texto -> catálogo (crea si no existe) + evita duplicados por normalización
+    const ocupacionInput = b.ocupacion ?? b.actividad ?? b.oficio ?? b.profesion;
+    const ocupacionTxt = (typeof ocupacionInput === 'string') ? ocupacionInput.trim() : '';
+
+    if (ocupacionTxt) {
+      try {
+        // Normalizador SQL (case/acentos/símbolos/espacios)
+        const KEY_COL = `btrim(regexp_replace(lower(unaccent(nombre)), '[^a-z0-9]+', ' ', 'g'))`;
+        const KEY_IN  = `btrim(regexp_replace(lower(unaccent($1)),     '[^a-z0-9]+', ' ', 'g'))`;
+
+        // 1) Buscar si ya existe (activo o no; si querés solo activo, dejalo como está)
+        let occ = await pool.query(
+          `SELECT id, nombre, activo
+             FROM public.ocupaciones_catalogo
+            WHERE ${KEY_COL} = ${KEY_IN}
+            LIMIT 1`,
+          [ocupacionTxt]
+        );
+
+        // 2) Si no existe, insertarlo (sin duplicar)
+        if (!occ.rows[0]) {
+          await pool.query(
+            `INSERT INTO public.ocupaciones_catalogo (nombre, nombre_key, activo)
+             VALUES (
+               $1,
+               btrim(regexp_replace(lower(unaccent($1)), '[^a-z0-9]+', ' ', 'g')),
+               TRUE
+             )
+             ON CONFLICT ON CONSTRAINT ocupaciones_catalogo_nombre_key_uk DO NOTHING`,
+            [ocupacionTxt]
+          );
+
+          // 3) Releer para obtener id/nombre final
+          occ = await pool.query(
+            `SELECT id, nombre, activo
+               FROM public.ocupaciones_catalogo
+              WHERE ${KEY_COL} = ${KEY_IN}
+              LIMIT 1`,
+            [ocupacionTxt]
+          );
+        }
+
+        const occRow  = occ.rows[0];
+        const occName = occRow?.nombre || ocupacionTxt;
+        const occId   = occRow?.id ?? null;
+
+        // Guardar texto (compatibilidad)
+        putIf(cols, payload, 'ocupacion', occName);
+
+        // Guardar FK solo si tu tabla victimas tiene la columna
+        if (occId != null) {
+          if (cols.has('ocupacion_id')) payload.ocupacion_id = occId;
+          else if (cols.has('ocupacion_catalogo_id')) payload.ocupacion_catalogo_id = occId;
+        }
+      } catch (e) {
+        // Fallback: no romper nada si algo falla
+        putIf(cols, payload, 'ocupacion', ocupacionTxt);
+      }
+    } else {
+      // si viene vacío, lo dejamos como estaba (no forzamos nada)
+      putIf(cols, payload, 'ocupacion', b.ocupacion ?? b.actividad ?? b.oficio ?? b.profesion);
+    }
 
     // Dirección / residencia
     putIf(cols, payload, 'direccion_actual', b.direccion_actual ?? b.direccion);
@@ -1934,54 +2320,46 @@ app.post('/apiv2/victimas', authMiddleware, async (req, res) => {
     );
     if (muniRes != null) putIf(cols, payload, 'municipio_residencia_id', muniRes);
 
-    // Nacionalidad (si existe columna)
+    // Nacionalidad
     putIf(cols, payload, 'nacionalidad',    b.nacionalidad);
     putIf(cols, payload, 'nacionalidad_id', b.nacionalidad_id);
 
-    // Origen: ID directo o resolución por texto
+    // Origen
     const origenInput =
       b.municipio_origen_id ?? b.origen_municipio_id ??
       b.municipio_origen    ?? b.lugar_origen       ?? b.origen;
 
-    let muniOrig = toInt(origenInput);
-if (muniOrig == null && typeof origenInput === 'string') {
-  muniOrig = await resolveMunicipioIdByText(origenInput);
-}
+    // ✅ Normaliza formatos tipo "Municipio/Departamento" -> "Municipio, Departamento"
+    const origenRaw = (typeof origenInput === 'string') ? origenInput.trim() : origenInput;
+    const origenForResolve =
+      (typeof origenRaw === 'string')
+        ? origenRaw.replace(/\s*\/\s*/g, ', ')
+        : origenRaw;
 
-/* ✅ Opción 2 aplicada:
-   - Si hay municipio -> guarda municipio_origen_id.
-   - Si NO hay municipio y es texto -> normaliza a país (si no es GT) o conserva texto (si es GT).
-   - Merge de payload.extra (no lo pisamos). */
-if (muniOrig != null) {
-  putIf(cols, payload, 'municipio_origen_id', muniOrig);
-}
-
-const extra = { ...(payload.extra || {}) };
-
-if (muniOrig == null && typeof origenInput === 'string' && origenInput.trim()) {
-  const raw = origenInput.trim();
-  // Si NO parece lugar de Guatemala => normaliza a país; si sí, conserva el texto
-  extra.origen_texto = looksLikeGuatemalaPlace(raw)
-    ? raw
-    : normalizaPaisDesdeTexto(raw);
-}
-
-if (typeof b.residencia === 'string' && b.residencia.trim()) {
-  extra.residencia_texto = b.residencia.trim();
-}
-
-if (Object.keys(extra).length && cols.has('extra')) {
-  payload.extra = extra;
-}
-
-
-    // NUEVO: trazabilidad (solo si existen columnas—no rompe si aún no migras)
-    if (cols.has('created_por') && userId) {
-      payload.created_por = userId;
+    let muniOrig = toInt(origenForResolve);
+    if (muniOrig == null && typeof origenForResolve === 'string') {
+      muniOrig = await resolveMunicipioIdByText(origenForResolve);
     }
-    if (cols.has('area_registro_id') && (userAreaId || b.area_registro_id)) {
-      payload.area_registro_id = toInt(b.area_registro_id) ?? userAreaId ?? null;
+
+    if (muniOrig != null) putIf(cols, payload, 'municipio_origen_id', muniOrig);
+
+    // Extra (merge)
+    const extra = { ...(cols.has('extra') ? (b.extra || {}) : {}) };
+
+    // ✅ Siempre guardar texto para mostrar, aunque exista ID
+    if (typeof origenRaw === 'string' && origenRaw.trim()) {
+      extra.origen_texto = origenRaw.trim();
     }
+
+    if (typeof b.residencia === 'string' && b.residencia.trim()) {
+      extra.residencia_texto = b.residencia.trim();
+    }
+
+    if (Object.keys(extra).length && cols.has('extra')) payload.extra = extra;
+
+    // ✅ Trazabilidad SIEMPRE desde el token (y usando tus columnas reales)
+    if (creadorCol) payload[creadorCol] = Number(userId) || null;
+    if (areaCol)    payload[areaCol]    = toInt(b.area_id) ?? Number(areaId) ?? null;
 
     if (!Object.keys(payload).length) {
       return res.status(400).json({ error: 'Sin columnas válidas para insertar en victimas.' });
@@ -1996,27 +2374,31 @@ if (Object.keys(extra).length && cols.has('extra')) {
       values
     );
 
-    res.status(201).json({ id: rows[0].id });
+    return res.status(201).json({ id: rows[0].id });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: 'Error al crear víctima' });
+    return res.status(500).json({ error: 'Error al crear víctima' });
   }
 });
 
 
 app.put('/apiv2/victimas/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
+  const check = await assertVictimaAccess(req, id);
+  if (!check.ok) return res.status(check.code).json({ error: check.msg });
+
   try {
     const cols = await getTableCols('victimas');
     const b = req.body || {};
 
     // Cargar extra actual (para merge)
     let currentExtra = {};
-if (cols.has('extra')) {
-  const r = await pool.query('SELECT extra FROM victimas WHERE id = $1', [id]);
-  currentExtra = r.rows?.[0]?.extra ?? {};
-}
+    if (cols.has('extra')) {
+      const r = await pool.query('SELECT extra FROM victimas WHERE id = $1', [id]);
+      currentExtra = r.rows?.[0]?.extra ?? {};
+    }
 
+    const nextExtra = { ...(currentExtra || {}) }; // ✅ FIX: antes no existía
     const payload = {};
 
     putIf(cols, payload, 'primer_nombre',    b.primer_nombre);
@@ -2050,30 +2432,35 @@ if (cols.has('extra')) {
     putIf(cols, payload, 'nacionalidad',    b.nacionalidad);
     putIf(cols, payload, 'nacionalidad_id', b.nacionalidad_id);
 
-    // Origen (ID directo o resolver por texto)
-    const origenInput =
-      b.municipio_origen_id ?? b.origen_municipio_id ??
-      b.municipio_origen    ?? b.lugar_origen       ?? b.origen;
+ // Origen (ID directo o resolver por texto)
+const origenInput =
+  b.municipio_origen_id ?? b.origen_municipio_id ??
+  b.municipio_origen    ?? b.lugar_origen       ?? b.origen;
 
-    let mo = toInt(origenInput);
-    if (mo == null && typeof origenInput === 'string') {
-      mo = await resolveMunicipioIdByText(origenInput);
-    }
-    if (mo != null) {
-      putIf(cols, payload, 'municipio_origen_id', mo);
-    }
+const origenRaw = (typeof origenInput === 'string') ? origenInput.trim() : origenInput;
+const origenForResolve =
+  (typeof origenRaw === 'string')
+    ? origenRaw.replace(/\s*\/\s*/g, ', ')
+    : origenRaw;
 
-    // Merge de EXTRA
-  const nextExtra = { ...currentExtra };
-if (mo == null && typeof origenInput === 'string' && origenInput.trim()) {
-  const raw = origenInput.trim();
-  nextExtra.origen_texto = looksLikeGuatemalaPlace(raw) ? raw : normalizaPaisDesdeTexto(raw);
+let mo = toInt(origenForResolve);
+if (mo == null && typeof origenForResolve === 'string') {
+  mo = await resolveMunicipioIdByText(origenForResolve);
 }
-if (typeof b.residencia === 'string' && b.residencia.trim()) {
-  nextExtra.residencia_texto = b.residencia.trim();
+if (mo != null) {
+  putIf(cols, payload, 'municipio_origen_id', mo);
 }
-if (Object.keys(nextExtra).length && cols.has('extra')) {
-  payload.extra = nextExtra;
+
+// Merge de EXTRA (asegura nextExtra exista arriba)
+if (cols.has('extra')) {
+  // ✅ Siempre guardar texto para mostrar
+  if (typeof origenRaw === 'string' && origenRaw.trim()) {
+    nextExtra.origen_texto = origenRaw.trim();
+  }
+  if (typeof b.residencia === 'string' && b.residencia.trim()) {
+    nextExtra.residencia_texto = b.residencia.trim();
+  }
+  if (Object.keys(nextExtra).length) payload.extra = nextExtra;
 }
 
     const fields = Object.keys(payload);
@@ -2097,10 +2484,21 @@ if (Object.keys(nextExtra).length && cols.has('extra')) {
 
 app.delete('/apiv2/victimas/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
-  const { rowCount } = await pool.query('DELETE FROM victimas WHERE id = $1', [id]);
-  if (rowCount === 0) return res.status(404).json({ error: 'Víctima no encontrada' });
-  res.json({ message: 'Víctima eliminada' });
+
+  try {
+    const check = await assertVictimaAccess(req, id);
+    if (!check.ok) return res.status(check.code).json({ error: check.msg });
+
+    const { rowCount } = await pool.query('DELETE FROM victimas WHERE id = $1', [id]);
+    if (rowCount === 0) return res.status(404).json({ error: 'Víctima no encontrada' });
+
+    res.json({ message: 'Víctima eliminada' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Error al eliminar víctima' });
+  }
 });
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 🔪 5) Agresores (CRUD) – PROTECTED
@@ -2341,83 +2739,168 @@ async function replaceAgresores(client, casoId, agresores = []) {
 
 // LISTADO: CG solo ve en_progreso y completado; Área ve sus casos (todos los estados)
 app.get('/apiv2/casos', authMiddleware, async (req, res) => {
-  const { role, area } = req.user;
+  const { roleId, areaId, userId } = authIds(req);
+
   try {
-    if (role === ROLES.COORD_GENERAL) {
+    const baseSelect = `
+      SELECT
+        c.*,
+        COALESCE(
+          NULLIF(TRIM(v.nombre),''),
+          NULLIF(TRIM(CONCAT_WS(' ', v.primer_nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido)),'')
+        ) AS victima_nombre_completo,
+        uc.nombre_completo AS creado_por_nombre,
+        ua.nombre_completo AS asignado_a_nombre
+      FROM casos c
+      LEFT JOIN victimas v ON v.id = c.victima_id
+      LEFT JOIN usuarios uc ON uc.id = c.creado_por
+      LEFT JOIN usuarios ua ON ua.id = c.asignado_id
+    `;
+
+    // CG
+    if (roleId === ROLES.COORD_GENERAL) {
       const { rows } = await pool.query(
-        `SELECT * FROM casos 
-         WHERE estado IN ($1,$2) 
-         ORDER BY 
-            CASE estado 
-              WHEN 'en_progreso' THEN 1
-              WHEN 'completado' THEN 2
-            END, id DESC`,
+        `${baseSelect}
+         WHERE c.estado IN ($1,$2)
+         ORDER BY CASE c.estado WHEN $1 THEN 1 WHEN $2 THEN 2 END, c.id DESC`,
         [ESTADOS.EN_PROGRESO, ESTADOS.COMPLETADO]
       );
       return res.json(rows);
     }
-    const { rows } = await pool.query(
-      'SELECT * FROM casos WHERE area_id = $1 ORDER BY id DESC',
-      [area]
-    );
-    res.json(rows);
+
+    // Coord Área
+    if (roleId === ROLES.COORD_AREA) {
+      const { rows } = await pool.query(
+        `${baseSelect}
+         WHERE c.area_id = $1
+         ORDER BY c.id DESC`,
+        [areaId]
+      );
+      return res.json(rows);
+    }
+
+    // Operativo
+    if (roleId === ROLES.OPERATIVO) {
+      const { rows } = await pool.query(
+        `${baseSelect}
+         WHERE c.area_id = $1
+           AND (c.creado_por = $2 OR c.asignado_id = $2)
+         ORDER BY c.id DESC`,
+        [areaId, userId]
+      );
+      return res.json(rows);
+    }
+
+    return res.status(403).json({ error: 'Rol no autorizado' });
   } catch (err) {
-    console.error(err); res.status(500).json({ error: 'Error en el servidor' });
+    console.error(err);
+    res.status(500).json({ error: 'Error en el servidor' });
   }
 });
+
 
 // DETALLE: CG solo accede en_progreso/completado; Área solo su área
 app.get('/apiv2/casos/:id', authMiddleware, async (req, res) => {
-  const { role, area } = req.user;
+  const { roleId, areaId, userId } = authIds(req);
   const { id } = req.params;
-  try {
-    const { rows } = await pool.query('SELECT * FROM casos WHERE id = $1', [id]);
-    if (!rows[0]) return res.status(404).json({ error: 'Caso no encontrado' });
-    const caso = rows[0];
 
-    if (role === ROLES.COORD_GENERAL) {
-      if (![ESTADOS.EN_PROGRESO, ESTADOS.COMPLETADO].includes(caso.estado)) {
+  try {
+    const full = await __casosExt.fetchCasoCompleto(pool, id);
+    if (!full) return res.status(404).json({ error: 'Caso no encontrado' });
+
+    if (roleId === ROLES.COORD_GENERAL) {
+      if (![ESTADOS.EN_PROGRESO, ESTADOS.COMPLETADO].includes(full.estado)) {
         return res.status(403).json({ error: 'CG solo accede a en_progreso/completado' });
       }
-    } else if (caso.area_id !== area) {
-      return res.status(403).json({ error: 'No autorizado' });
+      return res.json(full);
     }
 
-    // ⬇️ NUEVO: devolver caso expandido con pivots/hijos/agresores
-    const full = await __casosExt.fetchCasoCompleto(pool, id);
-    res.json(full);
+    if (roleId === ROLES.COORD_AREA) {
+      if (Number(full.area_id) !== Number(areaId)) {
+        return res.status(403).json({ error: 'No autorizado (otra área)' });
+      }
+      return res.json(full);
+    }
+
+    if (roleId === ROLES.OPERATIVO) {
+      const esMio = Number(full.creado_por) === Number(userId) || Number(full.asignado_id) === Number(userId);
+      if (Number(full.area_id) !== Number(areaId) || !esMio) {
+        return res.status(403).json({ error: 'No autorizado (no es tu caso)' });
+      }
+      return res.json(full);
+    }
+
+    return res.status(403).json({ error: 'Rol no autorizado' });
   } catch (err) {
-    console.error(err); res.status(500).json({ error: 'Error en el servidor' });
+    console.error(err);
+    return res.status(500).json({ error: 'Error en el servidor' });
   }
 });
+
 
 // Historial por caso
 app.get('/apiv2/casos/:id/historial', authMiddleware, async (req, res) => {
-  const { role, area } = req.user;
+  const { roleId, areaId, userId } = authIds(req);
   const { id } = req.params;
+
   try {
-    const c = await pool.query('SELECT area_id, estado FROM casos WHERE id = $1', [id]);
+    const c = await pool.query(
+      'SELECT id, area_id, estado, creado_por, asignado_id FROM casos WHERE id = $1',
+      [id]
+    );
     if (!c.rows[0]) return res.status(404).json({ error: 'Caso no encontrado' });
 
-    if (role !== ROLES.COORD_GENERAL && c.rows[0].area_id !== area) {
-      return res.status(403).json({ error: 'No autorizado' });
-    }
-    if (role === ROLES.COORD_GENERAL && ![ESTADOS.EN_PROGRESO, ESTADOS.COMPLETADO].includes(c.rows[0].estado)) {
-      return res.status(403).json({ error: 'CG solo accede a en_progreso/completado' });
+    const caso = c.rows[0];
+
+    // Permisos
+    if (roleId === ROLES.COORD_GENERAL) {
+      if (![ESTADOS.EN_PROGRESO, ESTADOS.COMPLETADO].includes(caso.estado)) {
+        return res.status(403).json({ error: 'CG solo accede a en_progreso/completado' });
+      }
+    } else if (roleId === ROLES.COORD_AREA) {
+      if (Number(caso.area_id) !== Number(areaId)) {
+        return res.status(403).json({ error: 'No autorizado (otra área)' });
+      }
+    } else if (roleId === ROLES.OPERATIVO) {
+      const esMio = Number(caso.creado_por) === Number(userId) || Number(caso.asignado_id) === Number(userId);
+      if (Number(caso.area_id) !== Number(areaId) || !esMio) {
+        return res.status(403).json({ error: 'No autorizado (no es tu caso)' });
+      }
+    } else {
+      return res.status(403).json({ error: 'Rol no autorizado' });
     }
 
-    const { rows } = await pool.query(
-      `SELECT h.*, u.nombre_completo AS usuario_nombre 
-       FROM casos_historial h 
-       LEFT JOIN usuarios u ON u.id = h.usuario_id 
-       WHERE h.caso_id = $1 
-       ORDER BY h.created_at ASC`, [id]
-    );
-    res.json(rows);
+const { rows } = await pool.query(
+  `SELECT
+      h.*,
+      u.nombre_completo AS usuario_nombre,
+      u.role_id AS usuario_role_id,
+      u.area_id AS usuario_area_id,
+      (
+        LOWER(COALESCE(h.estado_hasta, '')) = 'borrador'
+        AND COALESCE(h.estado_desde, '') <> ''
+        AND LOWER(COALESCE(h.estado_desde, '')) <> 'borrador'
+        AND (
+          u.role_id = $2
+          OR (u.role_id = $3 AND u.area_id = $4)
+        )
+      ) AS es_devolucion_coordinacion
+   FROM casos_historial h
+   LEFT JOIN usuarios u ON u.id = h.usuario_id
+   WHERE h.caso_id = $1
+   ORDER BY h.created_at ASC`,
+  [id, ROLES.COORD_GENERAL, ROLES.COORD_AREA, caso.area_id]
+);
+
+return res.json(rows);
+
+
   } catch (e) {
-    console.error(e); res.status(500).json({ error: 'Error obteniendo historial' });
+    console.error(e);
+    return res.status(500).json({ error: 'Error obteniendo historial' });
   }
 });
+
 
 // ─────────────────────────────────────────────────────────────
 // NUEVO: ¿Hay borrador para esta víctima en mi área?
@@ -2540,6 +3023,12 @@ app.post('/apiv2/casos', authMiddleware, async (req, res) => {
     let baseIdx = 5;
 
     const colsCasosNew = await getTableCols('casos');
+
+    // ✅ PASO 3: RESIDENCIA (front manda TEXTO -> backend resuelve residencia_id)
+    try {
+      await applyResidenciaCatalogoToBody(colsCasosNew, body, pool);
+    } catch {}
+
     for (const [k, v] of Object.entries(body)) {
       if (reserved.has(k)) continue;
       if (!colsCasosNew.has(String(k).toLowerCase())) continue; // solo columnas reales
@@ -2601,6 +3090,33 @@ app.put('/apiv2/casos/:id', authMiddleware, async (req, res) => {
 
     const body = req.body || {};
     const colsCasosForPut = await getTableCols('casos');
+
+    // ✅ PASO 4: residencia (texto) -> residencia_id (FK) sin romper compatibilidad
+    try {
+      if (colsCasosForPut.has('residencia_id') && body.residencia !== undefined) {
+        const residenciaTxt = String(body.residencia ?? '').trim();
+
+        // Mantener el texto (compatibilidad)
+        if (colsCasosForPut.has('residencia')) {
+          body.residencia = residenciaTxt ? residenciaTxt : null;
+        }
+
+        // Resolver FK
+        if (residenciaTxt) {
+          const r = await client.query(
+            `SELECT id
+             FROM residencias_catalogo
+             WHERE activo = TRUE AND LOWER(nombre) = LOWER($1)
+             LIMIT 1`,
+            [residenciaTxt]
+          );
+          body.residencia_id = r.rows?.[0]?.id ?? null;
+        } else {
+          body.residencia_id = null;
+        }
+      }
+    } catch {}
+
     // Merge a JSONB extra para "otros_*" si no hay columnas directas
     try {
       const colsCasos = await getTableCols('casos');
@@ -2619,6 +3135,7 @@ app.put('/apiv2/casos/:id', authMiddleware, async (req, res) => {
         }
       }
     } catch {}
+
     const relKeys = new Set([
       'tipos_violencia_ids','medios_agresion_ids',
       'ref_interna_ids','ref_externa_ids',
@@ -2721,21 +3238,43 @@ app.post('/apiv2/casos/:id/asignar', authMiddleware, async (req, res) => {
 // Enviar a revisión (borrador -> pendiente) – rojo
 app.post('/apiv2/casos/:id/enviar-revision', authMiddleware, async (req, res) => {
   const { role, area, id: userId } = req.user;
-  if (![ROLES.COORD_AREA, ROLES.OPERATIVO].includes(role)) return res.status(403).json({ error: 'No autorizado' });
+  if (![ROLES.COORD_AREA, ROLES.OPERATIVO].includes(role)) {
+    return res.status(403).json({ error: 'No autorizado' });
+  }
+
   const { id } = req.params;
+
   try {
     const c = await pool.query('SELECT area_id, estado FROM casos WHERE id = $1', [id]);
     if (!c.rows[0]) return res.status(404).json({ error: 'Caso no encontrado' });
     if (c.rows[0].area_id !== area) return res.status(403).json({ error: 'Caso de otra área' });
-    if (c.rows[0].estado !== ESTADOS.BORRADOR) return res.status(400).json({ error: 'Solo borrador puede ir a pendiente' });
+    if (c.rows[0].estado !== ESTADOS.BORRADOR) {
+      return res.status(400).json({ error: 'Solo borrador puede ir a pendiente' });
+    }
 
-    await pool.query(`UPDATE casos SET estado=$1 WHERE id = $2`, [ESTADOS.PENDIENTE, id]);
+    // ✅ 4.A: UPDATE tolerante a existencia de columna enviado_por
+    const colsCasos = await getTableCols('casos');
+
+    if (colsCasos.has('enviado_por')) {
+      await pool.query(
+        `UPDATE casos SET estado = $1, enviado_por = $2 WHERE id = $3`,
+        [ESTADOS.PENDIENTE, userId, id]
+      );
+    } else {
+      await pool.query(
+        `UPDATE casos SET estado = $1 WHERE id = $2`,
+        [ESTADOS.PENDIENTE, id]
+      );
+    }
+
     await addHistorial(id, userId, 'cambiar_estado', ESTADOS.BORRADOR, ESTADOS.PENDIENTE, 'Se envía a revisión');
-    res.json({ message: 'Caso enviado a revisión (pendiente)' });
+    return res.json({ message: 'Caso enviado a revisión (pendiente)' });
   } catch (err) {
-    console.error(err); res.status(500).json({ error: 'Error en el servidor' });
+    console.error(err);
+    return res.status(500).json({ error: 'Error en el servidor' });
   }
 });
+
 
 // Validar (pendiente -> validado)
 app.post('/apiv2/casos/:id/validar', authMiddleware, async (req, res) => {
@@ -2783,21 +3322,58 @@ app.post('/apiv2/casos/:id/devolver', authMiddleware, async (req, res) => {
 // (Opcional/legacy) Enviar a CG (validado -> enviado)
 app.post('/apiv2/casos/:id/enviar', authMiddleware, async (req, res) => {
   const { role, area, id: userId } = req.user;
-  if (![ROLES.COORD_AREA, ROLES.COORD_GENERAL].includes(role)) return res.status(403).json({ error: 'No autorizado' });
+  if (![ROLES.COORD_AREA, ROLES.COORD_GENERAL].includes(role)) {
+    return res.status(403).json({ error: 'No autorizado' });
+  }
+
   const { id } = req.params;
+
   try {
     const c = await pool.query('SELECT area_id, estado FROM casos WHERE id = $1', [id]);
     if (!c.rows[0]) return res.status(404).json({ error: 'Caso no encontrado' });
-    if (role === ROLES.COORD_AREA && c.rows[0].area_id !== area) return res.status(403).json({ error: 'Caso de otra área' });
-    if (c.rows[0].estado !== ESTADOS.VALIDADO) return res.status(400).json({ error: 'Solo validado puede enviarse' });
 
-    await pool.query(`UPDATE casos SET estado=$1, fecha_envio=NOW() WHERE id=$2`, [ESTADOS.ENVIADO, id]);
+    if (role === ROLES.COORD_AREA && c.rows[0].area_id !== area) {
+      return res.status(403).json({ error: 'Caso de otra área' });
+    }
+
+    if (c.rows[0].estado !== ESTADOS.VALIDADO) {
+      return res.status(400).json({ error: 'Solo validado puede enviarse' });
+    }
+
+    // ✅ 4.B: UPDATE tolerante a columnas fecha_envio y enviado_por
+    const colsCasos = await getTableCols('casos');
+
+    const setParts = [];
+    const params = [];
+    let i = 1;
+
+    setParts.push(`estado = $${i++}`);
+    params.push(ESTADOS.ENVIADO);
+
+    if (colsCasos.has('fecha_envio')) {
+      setParts.push(`fecha_envio = NOW()`);
+    }
+
+    if (colsCasos.has('enviado_por')) {
+      setParts.push(`enviado_por = $${i++}`);
+      params.push(userId);
+    }
+
+    params.push(id);
+
+    await pool.query(
+      `UPDATE casos SET ${setParts.join(', ')} WHERE id = $${i}`,
+      params
+    );
+
     await addHistorial(id, userId, 'cambiar_estado', ESTADOS.VALIDADO, ESTADOS.ENVIADO, 'Enviado (legacy)');
-    res.json({ message: 'Caso marcado como enviado (legacy)' });
+    return res.json({ message: 'Caso marcado como enviado (legacy)' });
   } catch (err) {
-    console.error(err); res.status(500).json({ error: 'Error en el servidor' });
+    console.error(err);
+    return res.status(500).json({ error: 'Error en el servidor' });
   }
 });
+
 
 // Poner EN PROGRESO (🟡) — SOLO Coordinación de Área
 app.post('/apiv2/casos/:id/en-progreso', authMiddleware, async (req, res) => {
@@ -3580,6 +4156,7 @@ const frJoin  = frTable ? `LEFT JOIN ${frTable} fr ON fr.id = c.fuente_referenci
     const sql = `
       SELECT
   ig.no_orden,
+  c.victima_id AS victima_id,
   ig.nombre_persona,
   ig.cui,
   ig.fecha_nacimiento,
@@ -3633,9 +4210,7 @@ const frJoin  = frTable ? `LEFT JOIN ${frTable} fr ON fr.id = c.fuente_referenci
       WHEN COALESCE(NULLIF(TRIM(c.ref_externa_otro),''), NULLIF(TRIM(c.ref_externa),''), NULLIF(TRIM(re.refs_externas),'')) IS NOT NULL THEN 'Externa'
       ELSE '' END
   ) AS interna_externa,
-
   ig.persona_que_agrede,
-  ig.acciones,
 
   /* Dirección: vista -> casos -> víctimas */
   COALESCE(
@@ -3645,11 +4220,14 @@ const frJoin  = frTable ? `LEFT JOIN ${frTable} fr ON fr.id = c.fuente_referenci
   ) AS direccion,
 
   ig.telefono,
-  ig.area_id,
-  ig.estado
+
+  /* Área (texto) */
+  COALESCE(NULLIF(TRIM(ar.nombre),''), ig.area_id::text) AS area
+
 FROM informe_coordinacion_general ig
 LEFT JOIN casos    c ON c.id = ig.no_orden
 LEFT JOIN victimas v ON v.id = c.victima_id
+LEFT JOIN areas ar ON ar.id = ig.area_id
 LEFT JOIN LATERAL (
   SELECT
     string_agg(COALESCE(h.nombre,''), E'\n' ORDER BY h.id) AS hijos_tbl_nombres,
@@ -3804,30 +4382,39 @@ const hijosEdadesCell = (val) => {
         .join(', ');
     }
 
-    // ── Ocupación desde 'victimas' (por cui/dpi) ─────────────────────────────
-    const cuiSet = new Set(rows.map(r => (r.cui ?? '').toString().trim()).filter(Boolean));
-    let ocupacionById = new Map();
-    if (cuiSet.size) {
-      const vCols = await getTableCols('victimas');
-      const idCol = vCols.has('cui') ? 'cui' : (vCols.has('dpi') ? 'dpi' : null);
-      if (idCol) {
-        const all = [...cuiSet];
-        const chunk = 700;
-        const pairs = [];
-        for (let i = 0; i < all.length; i += chunk) {
-          const slice = all.slice(i, i + chunk);
-          // eslint-disable-next-line no-await-in-loop
-          const r = await pool.query(
-            `SELECT ${idCol}::text AS id_key, COALESCE(ocupacion,'') AS ocupacion
-               FROM victimas
-              WHERE ${idCol}::text = ANY($1::text[])`,
-            [slice]
-          );
-          for (const row of r.rows) pairs.push([String(row.id_key || ''), row.ocupacion || '']);
-        }
-        ocupacionById = new Map(pairs);
-      }
+  // ── Ocupación desde 'victimas' (por victima_id) ──────────────────────────
+const victimaIdSet = new Set(
+  rows
+    .map(r => Number(r.victima_id))
+    .filter(n => Number.isFinite(n) && n > 0)
+);
+
+let ocupacionByVictimaId = new Map();
+
+if (victimaIdSet.size) {
+  const all = [...victimaIdSet];
+  const chunk = 1000;
+  const pairs = [];
+
+  for (let i = 0; i < all.length; i += chunk) {
+    const slice = all.slice(i, i + chunk);
+
+    // eslint-disable-next-line no-await-in-loop
+    const rr = await pool.query(
+      `SELECT id::text AS id_key, COALESCE(ocupacion,'') AS ocupacion
+         FROM victimas
+        WHERE id = ANY($1::int[])`,
+      [slice]
+    );
+
+    for (const row of rr.rows) {
+      pairs.push([String(row.id_key || ''), row.ocupacion || '']);
     }
+  }
+
+  ocupacionByVictimaId = new Map(pairs);
+}
+
 
     // ── FALLBACK "Persona que agrede": primero puente, luego tabla detalle ───
     const aggConds = [];
@@ -3890,18 +4477,17 @@ const hijosEdadesCell = (val) => {
   'Quién refiere',
   'A dónde se refiere', /* ← grupo (cols 24-25) */
   '',
-  'Persona que agrede','Acciones','Dirección','Teléfono','Área','Estado'
+  'Persona que agrede','Dirección','Teléfono','Área'
 ];
 
 
 const H2 = [
   '','','','','','','','','','','','','','','','',
-  'Nombre','Sexo',  /* subcolumnas del grupo Hijas e hijos */
-  '',               /* “Edad (años)” va sola (sin subcolumna) */
-  '','','',
+  'Nombre','Sexo',
   '',
+  '','','','',
   'Interna','Externa',
-  '','','','','',''
+  '','','',''
 ];
 
    ws.addRow(H1);
@@ -3919,22 +4505,26 @@ ws.columns = [
   { width: 10 }, { width: 12 }, { width: 18 }, { width: 24 },
   { width: 24 }, { width: 22 }, { width: 26 }, { width: 28 },
   { width: 14 }, { width: 6 },  { width: 6 },  { width: 6 },
-  { width: 24 }, { width: 14 }, /* Hijas e hijos · Nombre / Sexo */
-  { width: 10 },                /* Edad (años) hijas/hijos */
+  { width: 24 }, { width: 14 }, // Hijas e hijos · Nombre / Sexo
+  { width: 10 },                // Edad (años) hijas/hijos
   { width: 14 }, { width: 16 }, { width: 18 },
   { width: 24 },
-  { width: 26 }, { width: 26 }, /* Interna / Externa */
-  { width: 26 }, { width: 20 }, { width: 26 }, { width: 16 }, { width: 8 }, { width: 12 },
+  { width: 26 }, { width: 26 }, // Interna / Externa
+  { width: 26 },                // Persona que agrede
+  { width: 26 },                // Dirección
+  { width: 16 },                // Teléfono
+  { width: 14 },                // Área (texto)
 ];
 
-const TOTAL = 31;
+
+const TOTAL = 29;
 
 for (let c = 1; c <= 16; c++) ws.mergeCells(1, c, 2, c);     // 1..16
 ws.mergeCells(1, 17, 1, 18);                                 // "Hijas e hijos" (grupo)
 ws.mergeCells(1, 19, 2, 19);                                 // "Edad (años)" hijas/hijos
 for (let c = 20; c <= 23; c++) ws.mergeCells(1, c, 2, c);    // 20..23
 ws.mergeCells(1, 24, 1, 25);                                 // "A dónde se refiere"
-for (let c = 26; c <= TOTAL; c++) ws.mergeCells(1, c, 2, c); // 26..31
+for (let c = 26; c <= TOTAL; c++) ws.mergeCells(1, c, 2, c); // 26..29
 
     const fmtDate = (d) => d ? new Date(d).toISOString().slice(0,10) : '';
 
@@ -3950,11 +4540,11 @@ for (let c = 26; c <= TOTAL; c++) ws.mergeCells(1, c, 2, c); // 26..31
       // ⬇️ NUEVO: “Esposo/Compañero/Novio/Conviviente” -> “Ex …” si Divorciada/Separada
       agresorNic = adjustAggByEstado(agresorNic, r.estado_civil);
 
-      const idKey      = (r.cui ?? '').toString().trim();
-      const ocupacion  = idKey ? (ocupacionById.get(idKey) || '') : '';
+      const idKey      = String(r.victima_id ?? '').trim();
+      const ocupacion  = idKey ? (ocupacionByVictimaId.get(idKey) || '') : '';
       const hijosNombres = r.hijos_tbl_nombres || hijosNombresCell(r.hijos);
-const hijosSexos   = r.hijos_tbl_sexos   || hijosSexosCell(r.hijos);
-const hijosEdades  = r.hijos_tbl_edades  || hijosEdadesCell(r.hijos);
+      const hijosSexos   = r.hijos_tbl_sexos   || hijosSexosCell(r.hijos);
+      const hijosEdades  = r.hijos_tbl_edades  || hijosEdadesCell(r.hijos);
 
       const rr = ws.addRow([
         r.no_orden ?? '',
@@ -3983,12 +4573,10 @@ const hijosEdades  = r.hijos_tbl_edades  || hijosEdadesCell(r.hijos);
         r.quien_refiere ?? '',
         r.ref_interna ?? '',   // ← NUEVO: Interna (col 22)
         r.ref_externa ?? '',   // ← NUEVO: Externa (col 23)
-        agresorNic,  
-        r.acciones ?? '',
+        agresorNic,
         r.direccion ?? '',
         r.telefono ?? '',
-        r.area_id ?? '',
-        r.estado ?? ''
+        r.area ?? ''
       ]);
 
       // Wrap en columnas de texto largas

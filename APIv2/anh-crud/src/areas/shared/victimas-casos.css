@@ -1,0 +1,728 @@
+/* Listados de víctimas y formularios de casos */
+:focus-visible {
+  outline: 2px solid rgba(59,130,246,.6);
+  outline-offset: 2px;
+}
+
+/* ===== Barra, botones y mensajes ===== */
+.boton-estadisticas {
+  background: var(--green);
+  color: #0b0f14;
+  border: none;
+  padding: 12px 18px;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform .08s ease, background .15s ease, box-shadow .15s ease;
+  box-shadow: var(--shadow);
+}
+.boton-estadisticas:hover {
+  background: var(--green-600);
+  transform: translateY(-1px);
+}
+.boton-estadisticas:active { transform: translateY(0); }
+.boton-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+/* ✅ SCOPE (solo áreas) */
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .acciones-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin:18px 0 12px;
+}
+
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .input-buscar,
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .card-header .input{
+  width:min(420px,100%);
+  background:var(--panel-2);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:12px 12px;
+  outline:none;
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .input-buscar::placeholder,
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .card-header .input::placeholder { color: #8aa0bb; }
+
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .input-buscar:focus,
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .card-header .input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.25);
+}
+
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .error,
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .cn-alert,
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .cd-alert{
+  background:linear-gradient(180deg, rgba(37,99,235,.18), rgba(37,99,235,.06));
+  border:1px solid var(--primary);
+  color:var(--text);
+  padding:12px 14px;
+  border-radius:12px;
+  margin:12px 0 18px;
+}
+
+/* ✅ Tabla de listas (scoped) */
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .acciones-top ~ table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+  box-shadow:var(--shadow);
+  color:var(--text);
+}
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .acciones-top ~ table thead th{
+  text-align:left;
+  padding:12px 14px;
+  font-weight:800;
+  background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.0));
+  border-bottom:1px solid var(--border);
+  color:var(--text);
+  position:sticky;
+  top:0;
+}
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .acciones-top ~ table tbody td{
+  padding:12px 14px;
+  border-bottom:1px solid rgba(255,255,255,.04);
+  color:var(--text);
+}
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .acciones-top ~ table tbody tr:hover{
+  background:rgba(59,130,246,.08);
+}
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .acciones-cell{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.acciones-cell > .muted { display: none; }
+
+/* ===== Modal para motivo ===== */
+.vl-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,12,.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.vl-modal {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  width: min(560px, 92vw);
+}
+.vl-modal header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.vl-modal .body { padding: 14px; line-height: 1.5; }
+.vl-modal .actions {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+.vl-modal .close {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+/* ===== Caso nuevo ===== */
+.cn-wrap,
+.cd-wrap {
+  max-width: 1100px;
+  margin: 32px auto 80px;
+  padding: 0 16px;
+  color: var(--text);
+}
+.cn-header,
+.cd-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.cn-back,
+.cd-back {
+  color: var(--muted);
+  text-decoration: none;
+  margin-right: 8px;
+}
+.cn-back:hover,
+.cd-back:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+.cn-muted,
+.cd-header-meta {
+  color: var(--muted);
+  font-size: .95rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.cn-form { display: block; }
+.cn-fieldset {
+  background: radial-gradient(circle at top left, rgba(148,163,184,.12), transparent 55%), var(--panel);
+  border: 1px solid rgba(148,163,184,.35);
+  border-radius: calc(var(--radius) + 2px);
+  padding: 20px 18px;
+  margin: 20px 0;
+  box-shadow: 0 14px 40px rgba(15,23,42,.55);
+}
+.cn-fieldset legend {
+  padding: 0 8px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  font-size: 1.02rem;
+}
+.cn-optional { color: var(--muted); font-weight: 500; font-size: .95rem; }
+.cn-required { color: var(--yellow); margin-left: 4px; }
+
+/* Campos con valor: resalto suave para indicar que ya se capturó */
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .cn-form input:not([type="checkbox"]):not([type="radio"]):not(:placeholder-shown),
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .cn-form select:has(option:checked:not([value=""])),
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .cn-form textarea:not(:placeholder-shown) {
+  border-color: rgba(59,130,246,.45);
+  box-shadow: 0 0 0 2px rgba(59,130,246,.12) inset;
+}
+
+.cn-row {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px 18px;
+  margin-bottom: 16px;
+}
+.cn-col { grid-column: span 6; }
+.cn-col-small {
+  grid-column: span 2;
+  display: flex;
+  align-items: flex-end;
+}
+@media (max-width: 900px) {
+  .cn-col,
+  .cn-col-small { grid-column: span 12; }
+}
+
+.cn-chips,
+.pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.chip {
+  background: var(--chip, #1b2431);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: transform .08s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+  user-select: none;
+}
+.chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--primary-600);
+}
+.chip.chip-active,
+.chip[aria-pressed="true"],
+.chip.is-selected {
+  background: var(--chip-active, #21324b);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(59,130,246,.18) inset, 0 6px 18px rgba(0,0,0,.25);
+}
+
+/* Light theme fixes for chips in Caso Nuevo/Detalle */
+:root[data-theme="light"] :where(.cn-wrap, .cd-wrap) .chip {
+  background: var(--chip);
+  color: #0b0f14;
+  border-color: #cbd5e1;
+}
+:root[data-theme="light"] :where(.cn-wrap, .cd-wrap) .chip:hover {
+  border-color: var(--primary-600);
+}
+:root[data-theme="light"] :where(.cn-wrap, .cd-wrap) .chip.chip-active,
+:root[data-theme="light"] :where(.cn-wrap, .cd-wrap) .chip[aria-pressed="true"],
+:root[data-theme="light"] :where(.cn-wrap, .cd-wrap) .chip.is-selected {
+  background: var(--chip-active);
+  color: #0b0f14;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37,99,235,.18) inset, 0 6px 18px rgba(15,23,42,.12);
+}
+
+.chip-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.chip-control input[type="checkbox"],
+.chip-control input[type="radio"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.chip-control input:checked + .chip {
+  background: var(--chip-active, #21324b);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(59,130,246,.18) inset;
+}
+
+.pill {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 700;
+  transition: border-color .15s ease, background .15s ease, transform .06s ease;
+}
+.pill:hover { border-color: var(--primary-600); }
+.pill input { display: none; }
+.pill input:checked ~ span,
+.pill.is-selected {
+  background: var(--chip-active, #21324b);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(59,130,246,.15) inset;
+}
+
+.cn-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.0));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  margin: 12px 0;
+}
+.cn-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cn-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--text);
+}
+.cn-check input {
+  width: auto;
+  accent-color: var(--primary);
+  margin: 0;
+}
+
+.cn-form a { color: var(--primary); }
+.cn-form a:hover { color: var(--primary-600); text-decoration: underline; }
+
+/* ===== Caso detalle ===== */
+.cd-card {
+  background: radial-gradient(circle at top left, rgba(148,163,184,.10), transparent 55%), var(--panel);
+  border: 1px solid rgba(148,163,184,.38);
+  border-radius: calc(var(--radius) + 2px);
+  box-shadow: 0 14px 40px rgba(15,23,42,.55);
+  padding: 18px 18px 20px;
+}
+.cd-section { margin: 10px 0 18px; }
+.cd-section h3 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+.cd-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+}
+.cd-item {
+  grid-column: span 6;
+  background: var(--panel-2);
+  border: 1px solid rgba(15,23,42,.85);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+@media (max-width: 900px) {
+  .cd-item { grid-column: span 12; }
+}
+.cd-label {
+  font-size: .85rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.cd-value {
+  font-weight: 700;
+  color: var(--text);
+  min-height: 1.25rem;
+}
+.cd-value-edit input,
+.cd-value-edit textarea {
+  width: 100%;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  outline: none;
+}
+.cd-value-edit textarea { min-height: 96px; resize: vertical; }
+
+.cn-actions,
+.cd-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+}
+.cn-actions .btn-primary,
+.cd-actions .btn-primary { min-width: 140px; }
+
+/* Botones de acciones en detalle (Volver / Editar / Eliminar) responsivos */
+@media (max-width: 640px) {
+  .cd-actions{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .cd-actions > *{
+    width:100%;
+    max-width:none;
+    min-width:0;
+  }
+}
+
+/* ✅ FIX: NO tocar textarea global fuera de áreas */
+.cn-card textarea,
+.cd-value-edit textarea,
+:where(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) textarea{
+  min-height: 112px;
+  resize: vertical;
+}
+
+.cn-form select,
+.cn-form textarea,
+.cn-form input,
+.cn-form input[type="date"],
+.cn-form input[type="text"],
+.cn-form input[type="number"] {
+  background: var(--panel-2) !important;
+  color: var(--text) !important;
+}
+.cn-form select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+.cn-form select option {
+  background: var(--panel-2);
+  color: var(--text);
+}
+.cn-form select option[disabled] { color: var(--muted); }
+.cn-form ::placeholder { color: #8aa0bb; opacity: 1; }
+.cn-form input:-webkit-autofill,
+.cn-form textarea:-webkit-autofill,
+.cn-form select:-webkit-autofill {
+  -webkit-text-fill-color: var(--text) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--panel-2) inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* ===== Utilidades ===== */
+.mt-2 { margin-top: 8px; }
+.mb-2 { margin-bottom: 8px; }
+.mt-4 { margin-top: 16px; }
+.mb-4 { margin-bottom: 16px; }
+.cn-help,
+.cn-form .cn-help,
+.cn-form .small-help,
+.small-help { color: var(--muted); }
+
+/* ===== Tabla responsive específica ===== */
+@media (max-width: 640px) {
+  :where(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td::before { content: ""; }
+
+  :where(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td:nth-child(1)::before { content: "ID"; }
+
+  :where(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td:nth-child(2)::before { content: "Nombre completo"; }
+
+  :where(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td:nth-child(3)::before { content: "Telefono"; }
+
+  :where(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td:nth-child(4)::before { content: "Correo"; }
+
+  :where(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td:nth-child(5)::before { content: "Acciones"; }
+
+  :where(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td[colspan]::before { content: none; }
+
+  :where(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td[colspan] { text-align: center; }
+
+  :where(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .acciones-top ~ table tbody td.acciones-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+}

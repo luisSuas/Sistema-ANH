@@ -1,0 +1,286 @@
+/* Overrides especificos para Social */
+
+/* Registrar sobreviviente: fila Nombres/Apellidos/Sexo mas compacta y alineada */
+:is(.social-shell, .social-main, .victimas-page) .form-row-identidad{
+  grid-template-columns: minmax(0,2fr) minmax(0,2fr) minmax(150px,0.9fr);
+  column-gap: 12px;
+}
+:is(.social-shell, .social-main, .victimas-page) .form-row-identidad select{
+  min-width: 150px;
+  max-width: 200px;
+  justify-self: start;
+}
+
+/* Caso nuevo (Social): alinear el checkbox con su etiqueta */
+.cn-wrap-social .cn-check{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-height: 46px;
+  width: fit-content;
+  margin-top: 0;
+}
+.cn-wrap-social .cn-check input{
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+/* Topbar social: reserva espacio para el switch de tema cuando flota */
+.social-topbar[data-avoid-fab]{
+  padding-right: clamp(96px, 16vw, var(--fab-safe-pr, 142px));
+}
+@media (max-width: 720px){
+  .social-topbar[data-avoid-fab]{ padding-right: max(82px, 10vw); }
+}
+
+@media (max-width: 1024px){
+  .social-shell.sidebar-open .social-main{
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+  }
+  .social-shell.sidebar-closed .social-main{
+    grid-column: 1 !important;
+  }
+  .social-shell.sidebar-open .social-sidebar{
+    z-index: 30;
+  }
+  :is(.social-shell, .social-main) .social-topbar{
+    height: auto !important;
+    padding: 12px 16px !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+    display: grid !important;
+    grid-template-columns: auto 1fr !important;
+    grid-template-areas:
+      "toggle title"
+      "date date" !important;
+  }
+  :is(.social-shell, .social-main) .social-topbar .sidebar-toggle{
+    grid-area: toggle !important;
+  }
+  :is(.social-shell, .social-main) .social-topbar h1{
+    font-size: 22px !important;
+    line-height: 1.2 !important;
+    margin: 0 0 2px 0 !important;
+    grid-area: title !important;
+  }
+  :is(.social-shell, .social-main) .social-topbar .topbar-actions{
+    width: 100% !important;
+    justify-content: flex-start !important;
+    margin-top: 0 !important;
+    grid-area: date !important;
+  }
+  :is(.social-shell, .social-main) .social-topbar .topbar-actions .muted{
+    margin-top: 2px !important;
+  }
+  :is(.social-shell, .social-main) .social-topbar .muted{
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 780px){
+  .coord-topbar{
+    display: grid !important;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "toggle title"
+      "search search";
+    row-gap: 8px;
+  }
+  .coord-topbar .sidebar-toggle{
+    grid-area: toggle;
+  }
+  .coord-topbar h1{
+    grid-area: title;
+    font-size: 20px !important;
+    line-height: 1.2;
+    padding-right: 96px;
+    min-width: 0;
+    word-break: break-word;
+  }
+  .coord-topbar .topbar-actions{
+    grid-area: search;
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+  .coord-topbar .topbar-actions .input{
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 780px){
+  .coord-topbar[data-avoid-fab]{
+    padding-right: 16px !important;
+  }
+}
+
+.vl-page .btn.btn-volver{
+  background: #dc2626;
+  border: 1px solid transparent;
+  color: #fff;
+}
+.vl-page .btn.btn-volver:hover{ background: #b91c1c; }
+.vl-page .btn.btn-volver:focus{
+  outline: 2px solid #fecaca;
+  outline-offset: 2px;
+}
+
+@media (max-width: 1024px){
+  :is(.social-shell, .social-main, .victimas-page) .form-row-identidad{
+    grid-template-columns: 1fr !important;
+  }
+  :is(.social-shell, .social-main, .victimas-page) .form-row-identidad select{
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+/* Caso detalle (Social): mejorar UI de edición */
+:where(.social-shell, .social-main, .cd-wrap) .cd-grid .cd-grid{
+  grid-column: 1 / -1;
+}
+:where(.social-shell, .social-main, .cd-wrap) .cd-item{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+:where(.social-shell, .social-main, .cd-wrap) .cd-value-edit{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+:where(.social-shell, .social-main, .cd-wrap) .cd-value-edit input,
+:where(.social-shell, .social-main, .cd-wrap) .cd-value-edit select,
+:where(.social-shell, .social-main, .cd-wrap) .cd-value-edit textarea{
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--text);
+}
+:where(.social-shell, .social-main, .cd-wrap) .cd-value-edit select{
+  appearance: none;
+}
+:where(.social-shell, .social-main, .cd-wrap) .cd-value-edit .cd-check{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+:where(.social-shell, .social-main, .cd-wrap) .cd-value-edit .btn-danger,
+:where(.social-shell, .social-main, .cd-wrap) .cd-value-edit .btn-secondary{
+  align-self: flex-start;
+}
+
+/* Notificaciones (Social): panel en tema oscuro + mobile */
+.social-shell .notif-panel{
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow) !important;
+}
+.social-shell .notif-panel .btn-secondary{
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.social-shell .notif-panel .notif-divider{
+  border-top: 1px solid var(--border) !important;
+}
+.social-shell .notif-panel .notif-item{
+  background: var(--panel-2);
+  border-color: var(--border) !important;
+}
+@media (max-width: 640px){
+  .social-shell .notif-panel{
+    position: fixed !important;
+    width: min(92vw, 340px) !important;
+    left: 50% !important;
+    right: auto !important;
+    top: 72px !important;
+    transform: translateX(-50%) !important;
+  }
+  .social-shell .notif-panel .notif-head{
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .social-shell .notif-panel .notif-actions{
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .social-shell .notif-panel .notif-footer{
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .social-shell .dev-alert{
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .social-shell .dev-item{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .social-shell .dev-actions{
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .social-shell .dev-actions .btn-primary,
+  .social-shell .dev-actions .btn-secondary{
+    width: 100%;
+  }
+}
+
+/* Psicologica: tabla responsive extra en VictimasLista */
+@media (max-width: 980px){
+  .vl-page .acciones-top ~ table{
+    display: block;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    min-width: 0;
+    width: 100%;
+  }
+  .vl-page .acciones-top ~ table thead{
+    display: none;
+  }
+  .vl-page .acciones-top ~ table tbody{
+    display: grid;
+    gap: 14px;
+    padding: 0;
+    margin: 0;
+  }
+  .vl-page .acciones-top ~ table tbody tr{
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .vl-page .acciones-top ~ table tbody td{
+    display: block;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 14px;
+  }
+  .vl-page .acciones-top ~ table tbody td:last-child{
+    border-bottom: none;
+  }
+  .vl-page .acciones-top ~ table tbody td.acciones-cell{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .vl-page .acciones-top ~ table tbody td.acciones-cell button{
+    width: 100%;
+    min-width: 0;
+  }
+}

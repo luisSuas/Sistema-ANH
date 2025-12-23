@@ -1,0 +1,194 @@
+/* Formularios e inputs comunes (SCOPE: solo áreas) */
+:is(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) label{
+  display:block;
+  margin:6px 0 6px;
+  color:var(--text);
+  font-weight:600;
+}
+
+/* Grid base: 3 columnas */
+:is(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .form-row{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:12px;
+  margin-top:12px;
+  align-items:start;
+}
+
+:is(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .form-item{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+
+:is(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) .small-label{
+  font-size:12px;
+  font-weight:700;
+  color:var(--muted);
+  margin-bottom:4px;
+  letter-spacing:.2px;
+}
+
+/* Inputs (solo dentro de áreas) */
+:is(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) :is(input, select, textarea, .input){
+  width:100%;
+  background:var(--panel-2);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px 12px;
+  outline:none;
+  font-size:.98rem;
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease, transform .06s ease;
+}
+
+/* ✅ Parche: placeholder SOLO en áreas (no global) */
+:is(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) :is(input, textarea, .input)::placeholder{
+  color:#8aa0bb;
+}
+
+/* ✅ Parche: focus SOLO en áreas (no global) */
+:is(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) :is(input, select, textarea, .input):focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(59,130,246,.25);
+}
+
+/* Textarea (solo áreas) */
+:is(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) textarea{
+  min-height:112px;
+  resize:vertical;
+}
+
+/* ✅ Parche: date color-scheme solo cuando el tema es dark */
+:root[data-theme="dark"]
+:is(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) input[type="date"]{
+  color-scheme:dark;
+}
+
+/* Ayudas */
+:is(
+  .social-shell, .social-main,
+  .medica-shell, .medica-main,
+  .legal-shell, .legal-main,
+  .psicologica-shell, .psicologica-main,
+  .albergue-shell, .albergue-main,
+  .espacioslibres-shell, .espacioslibres-main,
+  .area-shell, .area-main,
+  .victimas-page, .vl-page, .cn-wrap, .cd-wrap
+) :is(.cn-help, .form-help){
+  display:block;
+  margin-top:6px;
+  color:var(--muted);
+}
+
+/* Breakpoints: 2 columnas */
+@media (max-width: 1024px){
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .form-row{
+    grid-template-columns:repeat(2, minmax(0,1fr));
+  }
+}
+
+/* Breakpoints: 1 columna */
+@media (max-width: 680px){
+  :is(
+    .social-shell, .social-main,
+    .medica-shell, .medica-main,
+    .legal-shell, .legal-main,
+    .psicologica-shell, .psicologica-main,
+    .albergue-shell, .albergue-main,
+    .espacioslibres-shell, .espacioslibres-main,
+    .area-shell, .area-main
+  ) .form-row{
+    grid-template-columns:1fr;
+  }
+}

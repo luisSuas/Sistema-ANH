@@ -90,11 +90,14 @@
 /* Ajusta aquí las barras superiores que uses */
 .with-fab-top header,
 .with-fab-top .medica-topbar,
-.with-fab-top .general-topbar,
-.with-fab-top .admin-topbar,
-.with-fab-top .albergue-topbar,
 .with-fab-top .legal-topbar,
-.with-fab-top .psicologica-topbar{
+.with-fab-top .social-topbar,
+.with-fab-top .general-topbar,
+.with-fab-top .psicologica-topbar,
+.with-fab-top .albergue-topbar,
+.with-fab-top .admin-topbar,
+.with-fab-top .vl-topbar,
+.with-fab-top .area-shell .area-topbar{
   padding-right: max(var(--fab-safe-pr), 112px);
 }
 
@@ -102,11 +105,14 @@
 @media (max-width: 640px){
   .with-fab-top header,
   .with-fab-top .medica-topbar,
-  .with-fab-top .general-topbar,
-  .with-fab-top .admin-topbar,
-  .with-fab-top .albergue-topbar,
   .with-fab-top .legal-topbar,
-  .with-fab-top .psicologica-topbar{
+  .with-fab-top .social-topbar,
+  .with-fab-top .general-topbar,
+  .with-fab-top .psicologica-topbar,
+  .with-fab-top .albergue-topbar,
+  .with-fab-top .admin-topbar,
+  .with-fab-top .vl-topbar,
+  .with-fab-top .area-shell .area-topbar{
     padding-right: max(88px, 8vw);
   }
 }

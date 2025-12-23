@@ -1,0 +1,388 @@
+/* Layout común para shells de áreas */
+.social-shell,
+.medica-shell,
+.legal-shell,
+.psicologica-shell,
+.albergue-shell,
+.espacioslibres-shell,
+.area-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Sidebar */
+.social-sidebar,
+.medica-sidebar,
+.legal-sidebar,
+.psicologica-sidebar,
+.albergue-sidebar,
+.espacioslibres-sidebar,
+.area-shell .area-sidebar {
+  background: var(--sidebar-gradient);
+  color: #fff;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+}
+
+.social-brand,
+.medica-brand,
+.legal-brand,
+.psicologica-brand,
+.albergue-brand,
+.espacioslibres-brand,
+.area-shell .area-brand {
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: .3px;
+}
+
+/* Navegación */
+.social-nav,
+.medica-nav,
+.legal-nav,
+.psicologica-nav,
+.albergue-nav,
+.espacioslibres-nav,
+.area-shell .area-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.social-nav .nav-item,
+.medica-nav .nav-item,
+.legal-nav .nav-item,
+.psicologica-nav .nav-item,
+.albergue-nav .nav-item,
+.espacioslibres-nav .nav-item,
+.area-shell .nav-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--sidebar-link-color, #e2e8f0);
+  background: transparent;
+  border: 0;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .15s ease, box-shadow .15s ease, color .15s ease;
+}
+.social-nav .nav-item:hover,
+.medica-nav .nav-item:hover,
+.legal-nav .nav-item:hover,
+.psicologica-nav .nav-item:hover,
+.albergue-nav .nav-item:hover,
+.espacioslibres-nav .nav-item:hover,
+.area-shell .nav-item:hover {
+  background: var(--sidebar-hover-bg, rgba(255,255,255,.06));
+  color: var(--sidebar-link-hover, #fff);
+}
+.social-nav .nav-item.active,
+.medica-nav .nav-item.active,
+.legal-nav .nav-item.active,
+.psicologica-nav .nav-item.active,
+.albergue-nav .nav-item.active,
+.espacioslibres-nav .nav-item.active,
+.area-shell .nav-item.active {
+  background: var(--sidebar-active-bg, rgba(59,130,246,.25));
+  color: var(--sidebar-link-hover, #fff);
+  box-shadow: var(--sidebar-active-shadow, 0 0 0 2px rgba(59,130,246,.15) inset);
+}
+.nav-item:focus-visible {
+  outline: 2px solid rgba(59,130,246,.6);
+  outline-offset: 2px;
+}
+
+.social-userbox,
+.medica-userbox,
+.legal-userbox,
+.psicologica-userbox,
+.albergue-userbox,
+.espacioslibres-userbox,
+.area-shell .area-userbox {
+  margin-top: auto;
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding-top: 12px;
+}
+
+/* ✅ PARCHE: scoping de clases genéricas para evitar afectar Admin/Login */
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .link-ghost {
+  margin-top: 6px;
+  background: transparent;
+  color: #cbd5e1;
+  border: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .link-ghost:hover {
+  color: #fff;
+}
+
+/* Main */
+.social-main,
+.medica-main,
+.legal-main,
+.psicologica-main,
+.albergue-main,
+.espacioslibres-main,
+.area-shell .area-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.social-topbar,
+.medica-topbar,
+.legal-topbar,
+.psicologica-topbar,
+.albergue-topbar,
+.espacioslibres-topbar,
+.area-shell .area-topbar {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.social-topbar h1,
+.medica-topbar h1,
+.legal-topbar h1,
+.psicologica-topbar h1,
+.albergue-topbar h1,
+.espacioslibres-topbar h1,
+.area-shell .area-topbar h1 {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+
+/* ✅ PARCHE: scoping */
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.social-content,
+.medica-content,
+.legal-content,
+.psicologica-content,
+.albergue-content,
+.espacioslibres-content,
+.area-shell .area-content {
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+}
+
+/* ✅ PARCHE: scoping KPIs */
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .kpi {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .kpi-title {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .kpi-value {
+  font-size: 34px;
+  font-weight: 800;
+}
+
+/* ✅ PARCHE: scoping Cards */
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .card-header-right,
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .card-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* ✅ PARCHE: scoping links */
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .link,
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .link-button {
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .link:hover,
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .link-button:hover {
+  color: var(--primary-600);
+}
+
+/* ✅ PARCHE: scoping alerts & tables */
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .alert-info {
+  background: rgba(59,130,246,.12);
+  border: 1px solid rgba(59,130,246,.35);
+  color: var(--text);
+  padding: 10px;
+  border-radius: 10px;
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .table-wrap { overflow-x: auto; }
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .table {
+  min-width: 760px;
+  width: 100%;
+  border-collapse: collapse;
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .table th,
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .table td {
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .table thead th {
+  background: var(--table-head-bg);
+  color: var(--table-head-text);
+  font-weight: 700;
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .td-center {
+  text-align: center;
+  padding: 12px;
+  border: 1px solid var(--border);
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .pad { padding: 8px; }
+
+/* ✅ PARCHE: scoping details */
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .details-quick {
+  margin-top: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .summary-quick {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .details-quick[open] .summary-quick {
+  border-bottom: 1px solid var(--border);
+}
+:is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .quick-body {
+  padding: 12px;
+}
+
+/* Responsive */
+@media (max-width: 1280px) {
+  .social-shell,
+  .medica-shell,
+  .legal-shell,
+  .psicologica-shell,
+  .albergue-shell,
+  .espacioslibres-shell,
+  .area-shell {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+  /* ✅ PARCHE: scoping */
+  :is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .kpi-grid {
+    grid-template-columns: repeat(3, minmax(0,1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .social-shell,
+  .medica-shell,
+  .legal-shell,
+  .psicologica-shell,
+  .albergue-shell,
+  .espacioslibres-shell,
+  .area-shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+  /* ✅ PARCHE: scoping */
+  :is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+}
+
+@media (max-width: 780px) {
+  .social-shell,
+  .medica-shell,
+  .legal-shell,
+  .psicologica-shell,
+  .albergue-shell,
+  .espacioslibres-shell,
+  .area-shell {
+    grid-template-columns: 1fr;
+  }
+  .social-sidebar,
+  .medica-sidebar,
+  .legal-sidebar,
+  .psicologica-sidebar,
+  .albergue-sidebar,
+  .espacioslibres-sidebar,
+  .area-shell .area-sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .social-topbar,
+  .medica-topbar,
+  .legal-topbar,
+  .psicologica-topbar,
+  .albergue-topbar,
+  .espacioslibres-topbar,
+  .area-shell .area-topbar {
+    height: auto;
+    padding: 12px 16px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  /* ✅ PARCHE: scoping */
+  :is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .topbar-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .social-sidebar .nav-item,
+  .medica-sidebar .nav-item,
+  .legal-sidebar .nav-item,
+  .psicologica-sidebar .nav-item,
+  .albergue-sidebar .nav-item,
+  .espacioslibres-sidebar .nav-item {
+    padding: 12px 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* ✅ PARCHE: scoping */
+  :is(.social-shell,.medica-shell,.legal-shell,.psicologica-shell,.albergue-shell,.espacioslibres-shell,.area-shell) .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
